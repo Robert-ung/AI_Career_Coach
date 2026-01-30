@@ -36,3 +36,10 @@ ipykernel==6.27.1
 
 # Semantic Matching
 sentence-transformers==2.2.2
+
+# Dashboard
+streamlit==1.29.0
+plotly==5.18.0
+
+# Utilities
+python-dotenv==1.0.0
