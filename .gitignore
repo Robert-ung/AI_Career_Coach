@@ -83,6 +83,7 @@ results/
 chroma_db/
 *.index
 *.faiss
+data/faiss_index/
 
 # Fichiers temporaires
 tmp/

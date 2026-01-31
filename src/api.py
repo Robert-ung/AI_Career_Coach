@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile
 import os
 import json
+from .vector_store import JobVectorStore
 
 # Import des modules locaux
 from .cv_parser import CVParser
@@ -92,6 +93,34 @@ def get_jobs_dataset() -> Dict:
             _jobs_dataset = json.load(f)
     return _jobs_dataset
 
+_vector_store = None
+
+def get_vector_store() -> JobVectorStore:
+    """Obtenir le vector store FAISS (singleton)"""
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = JobVectorStore(model_name='all-mpnet-base-v2')
+        
+        # Chemins de l'index FAISS
+        index_path = PROJECT_ROOT / "data" / "faiss_index" / "jobs.index"
+        metadata_path = PROJECT_ROOT / "data" / "faiss_index" / "jobs_metadata.pkl"
+        
+        # Charger l'index si disponible
+        if index_path.exists() and metadata_path.exists():
+            _vector_store.load(str(index_path), str(metadata_path))
+            print(f"✅ Index FAISS chargé : {_vector_store.index.ntotal} offres")
+        else:
+            # Construire l'index si absent
+            print("⚠️  Index FAISS non trouvé, construction en cours...")
+            dataset = get_jobs_dataset()
+            _vector_store.build_index(dataset['jobs'], index_type='flat')
+            
+            # Sauvegarder pour la prochaine fois
+            index_path.parent.mkdir(parents=True, exist_ok=True)
+            _vector_store.save(str(index_path), str(metadata_path))
+            print(f"✅ Index FAISS construit et sauvegardé")
+    
+    return _vector_store
 
 # ============================================================================
 # MODÈLES PYDANTIC (VALIDATION DES RÉPONSES)
@@ -287,15 +316,23 @@ async def extract_skills(file: UploadFile = File(...)):
 async def recommend_jobs(
     file: UploadFile = File(...),
     top_n: int = Query(10, ge=1, le=25, description="Nombre de recommandations"),
-    min_score: float = Query(40.0, ge=0.0, le=100.0, description="Score minimum")
+    min_score: float = Query(40.0, ge=0.0, le=100.0, description="Score minimum"),
+    use_faiss: bool = Query(True, description="Utiliser FAISS pour pré-filtrage")
 ):
     """
     Obtenir des recommandations d'emploi basées sur un CV
+    
+    **Workflow :**
+    1. Extraction des compétences du CV
+    2. Si use_faiss=True : Pré-filtrage rapide avec FAISS (top 50)
+    3. Scoring multi-critères avec JobMatcher
+    4. Tri et filtrage final
     
     Args:
         file: Fichier PDF du CV
         top_n: Nombre de recommandations à retourner (défaut: 10)
         min_score: Score minimum pour filtrer (défaut: 40.0)
+        use_faiss: Utiliser FAISS pour accélérer (défaut: True)
         
     Returns:
         Liste des jobs recommandés avec scores de matching
@@ -328,7 +365,7 @@ async def recommend_jobs(
         
         # 2. Extraire les compétences
         extractor = get_skills_extractor()
-        skills_result = extractor.extract_from_cv(cv_text)  
+        skills_result = extractor.extract_from_cv(cv_text)
         cv_skills = skills_result['technical_skills']
         
         if not cv_skills:
@@ -337,21 +374,67 @@ async def recommend_jobs(
                 detail="Aucune compétence technique détectée dans le CV"
             )
         
-        # 3. Charger les jobs
-        dataset = get_jobs_dataset()
-        jobs = dataset['jobs']  
+        # 3. Obtenir les candidats (FAISS ou dataset complet)
+        if use_faiss:
+            # MÉTHODE FAISS : Pré-filtrage rapide
+            vector_store = get_vector_store()
+            
+            # Récupérer top 50 candidats via FAISS
+            faiss_candidates = vector_store.search(
+                cv_skills=cv_skills,
+                cv_text=cv_text[:500],  # Ajouter contexte du CV
+                top_k=min(50, vector_store.index.ntotal)
+            )
+            
+            # Extraire les jobs des résultats FAISS
+            candidate_jobs = [job for job, _ in faiss_candidates]
+            
+        else:
+            # MÉTHODE CLASSIQUE : Tous les jobs
+            dataset = get_jobs_dataset()
+            candidate_jobs = dataset['jobs']
         
-        # 4. Calculer les recommandations
+        # 4. Scoring détaillé avec JobMatcher
         matcher = get_job_matcher()
-        ranked_jobs = matcher.rank_jobs(cv_skills, jobs)  
+        detailed_results = []
         
-        # 5. Filtrer par score minimum et top_n
+        for job in candidate_jobs:
+            # Calculer tous les scores (skills, exp, location, competition)
+            detailed_score = matcher.calculate_job_match_score(cv_skills, job)
+            
+            # Trouver le score FAISS si disponible
+            faiss_score = None
+            if use_faiss:
+                faiss_match = next((s for j, s in faiss_candidates if j['job_id'] == job['job_id']), None)
+                faiss_score = faiss_match
+            
+            detailed_results.append({
+                'job_id': job['job_id'],
+                'title': job['title'],
+                'company': job['company'],
+                'location': job['location'],
+                'remote_ok': job.get('remote_ok', False),
+                'experience': job['experience'],
+                'global_score': detailed_score['global_score'],
+                'skills_score': detailed_score['skills_score'],
+                'experience_score': detailed_score['experience_score'],
+                'location_score': detailed_score['location_score'],
+                'competition_score': detailed_score['competition_score'],
+                'faiss_similarity': faiss_score,  # Nouveau champ
+                'skills_details': detailed_score['skills_details'],
+                'matching_skills': detailed_score['skills_details']['top_skills'][:10]
+            })
+        
+        # 5. Tri par score global
+        detailed_results.sort(key=lambda x: x['global_score'], reverse=True)
+        
+        # 6. Filtrer par score minimum et top_n
         filtered_jobs = [
-            job for job in ranked_jobs 
+            job for job in detailed_results 
             if job['global_score'] >= min_score
         ][:top_n]
         
-        # 6. Formater la réponse
+        # 7. Formater la réponse
         recommendations = []
         for job in filtered_jobs:
             recommendations.append({
@@ -359,19 +442,19 @@ async def recommend_jobs(
                 "title": job['title'],
                 "company": job['company'],
                 "location": job['location'],
-                "remote": job['remote_ok'],  
-                "experience_required": job['experience'],  
-                "score": job['global_score'],  
-                "skills_match": job['skills_score'],  
+                "remote": job['remote_ok'],
+                "experience_required": job['experience'],
+                "score": job['global_score'],
+                "skills_match": job['skills_score'],
                 "experience_match": job['experience_score'],
                 "location_match": job['location_score'],
                 "competition_factor": job['competition_score'],
-                "matching_skills": job['skills_details']['top_skills'][:10]  
+                "matching_skills": job['matching_skills']
             })
         
         return {
             "recommendations": recommendations,
-            "total_jobs_analyzed": len(jobs),
+            "total_jobs_analyzed": len(candidate_jobs),
             "cv_skills_count": len(cv_skills)
         }
         
@@ -389,7 +472,6 @@ async def recommend_jobs(
                 os.unlink(tmp_file_path)
             except:
                 pass
-
 
 @app.get("/api/v1/jobs", response_model=List[JobDetail], tags=["Jobs"])
 async def list_jobs(
@@ -538,6 +620,31 @@ async def get_stats():
             detail=f"Erreur lors de la récupération des statistiques: {str(e)}"
         )
 
+@app.get("/api/v1/faiss-stats", tags=["Stats"])
+async def get_faiss_stats():
+    """
+    Obtenir des statistiques sur l'index FAISS
+    
+    Returns:
+        Statistiques de l'index vectoriel
+    """
+    try:
+        vector_store = get_vector_store()
+        stats = vector_store.get_stats()
+        
+        return {
+            "faiss_enabled": stats['indexed'],
+            "total_jobs_indexed": stats['total_jobs'],
+            "model_used": stats['model_name'],
+            "embedding_dimension": stats['dimension'],
+            "index_type": "Flat L2 (exact search)"
+        }
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Erreur lors de la récupération des stats FAISS: {str(e)}"}
+        )
 
 # ============================================================================
 # GESTION DES ERREURS GLOBALES
@@ -579,6 +686,14 @@ async def startup_event():
     if not SKILLS_DB_PATH.exists():
         print("⚠️  ATTENTION : Base de compétences manquante")
         print(f"   Chemin attendu : {SKILLS_DB_PATH}")
+    
+    # ✅ PRÉ-CHARGER FAISS AU DÉMARRAGE
+    print("\n⏳ Pré-chargement du vector store FAISS...")
+    try:
+        _ = get_vector_store()  # Force le chargement
+        print("✅ FAISS chargé avec succès")
+    except Exception as e:
+        print(f"⚠️  Erreur FAISS : {e}")
     
     print("\n✅ API prête à recevoir des requêtes")
     print("📖 Documentation : http://127.0.0.1:8000/docs")
