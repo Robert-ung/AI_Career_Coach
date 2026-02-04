@@ -192,43 +192,66 @@ def extract_skills_via_api(cv_file):
 
 def recommend_jobs_via_api(cv_file, top_n=10, min_score=40.0):
     """
-    Obtenir des recommandations via l'API
-    
-    Args:
-        cv_file: Fichier PDF uploadé
-        top_n: Nombre de recommandations
-        min_score: Score minimum
-        
-    Returns:
-        dict ou None: {recommendations, total_jobs_analyzed, cv_skills_count}
+    Obtenir des recommandations via l'API FAISS (rapide)
     """
     try:
-        # Préparer le fichier
         cv_file.seek(0)
         
         files = {
-            "file": (cv_file.name, cv_file, "application/pdf")
+            "file": ("cv.pdf", cv_file, "application/pdf")
         }
+        
+        # Convertir min_score de 0-100 vers 0-1 pour FAISS
+        faiss_min_score = min_score / 100.0 if min_score > 1 else min_score
         
         params = {
-            "top_n": top_n,
-            "min_score": min_score
+            "top_k": top_n,
+            "min_score": faiss_min_score
         }
         
-        # Appeler l'API
         response = requests.post(
-            f"{API_BASE_URL}/api/v1/recommend-jobs",
+            f"{API_BASE_URL}/api/v1/jobs/recommend-fast",
             files=files,
             params=params,
-            timeout=120
+            timeout=30
         )
         
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            
+            # ✅ ADAPTER LA RÉPONSE FAISS AU FORMAT ATTENDU
+            adapted_recommendations = []
+            for job in data['recommendations']:
+                adapted_job = {
+                    "job_id": job.get("job_id", "N/A"),
+                    "title": job.get("title", "N/A"),
+                    "company": job.get("company", "N/A"),
+                    "location": job.get("location", "N/A"),
+                    "remote": job.get("remote", False),
+                    "experience_required": job.get("experience_required", "N/A"),
+                    "category": job.get("category", "Non spécifié"),
+                    # ✅ CLÉS IMPORTANTES
+                    "score": job.get("faiss_score_percent", 0),  # Score principal
+                    "skills_match": job.get("faiss_score_percent", 0),
+                    "experience_match": 0,
+                    "location_match": 0,
+                    "competition_factor": 0,
+                    "matching_skills": []
+                }
+                adapted_recommendations.append(adapted_job)
+            
+            return {
+                "recommendations": adapted_recommendations,
+                "total_jobs_analyzed": data.get("total_jobs_indexed", 0),
+                "cv_skills_count": 0
+            }
         else:
             st.error(f"❌ Erreur API (Code {response.status_code})")
-            error_detail = response.json().get('detail', 'Erreur inconnue')
-            st.error(f"Détail : {error_detail}")
+            try:
+                error_detail = response.json().get('detail', 'Erreur inconnue')
+                st.error(f"Détail : {error_detail}")
+            except:
+                st.error(f"Réponse : {response.text}")
             return None
             
     except requests.exceptions.ConnectionError:
@@ -238,7 +261,9 @@ def recommend_jobs_via_api(cv_file, top_n=10, min_score=40.0):
         st.error("⏱️ Timeout : L'API met trop de temps à répondre")
         return None
     except Exception as e:
-        st.error(f"❌ Erreur inattendue : {str(e)}")
+        st.error(f"❌ Erreur : {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 
@@ -292,8 +317,12 @@ def get_score_class(score):
 
 
 def display_job_card(job, rank):
-    """Afficher une carte d'offre d'emploi"""
-    score_class, emoji = get_score_class(job['score'])
+    """Afficher une carte d'offre d'emploi (compatible FAISS)"""
+    
+    # ✅ Récupérer le score (compatible FAISS et classique)
+    score = job.get('score', job.get('faiss_score_percent', 0))
+    
+    score_class, emoji = get_score_class(score)
     
     # Classe CSS pour la carte
     card_class = f"job-card job-card-{score_class}" if score_class != "low" else "job-card"
@@ -304,12 +333,12 @@ def display_job_card(job, rank):
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        st.markdown(f"### {emoji} #{rank} - {job['title']}")
-        st.markdown(f"**🏢 {job['company']}** | 📍 {job['location']}")
+        st.markdown(f"### {emoji} #{rank} - {job.get('title', 'N/A')}")
+        st.markdown(f"**🏢 {job.get('company', 'N/A')}** | 📍 {job.get('location', 'N/A')}")
     
     with col2:
         st.markdown(
-            f'<div class="score-badge score-{score_class}">{job["score"]:.1f}%</div>', 
+            f'<div class="score-badge score-{score_class}">{score:.1f}%</div>', 
             unsafe_allow_html=True
         )
     
@@ -317,29 +346,34 @@ def display_job_card(job, rank):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown(f"**💼 Expérience** : {job['experience_required']}")
-        st.markdown(f"**🏠 Remote** : {'Oui ✅' if job['remote'] else 'Non ❌'}")
+        st.markdown(f"**💼 Expérience** : {job.get('experience_required', 'N/A')}")
+        st.markdown(f"**🏠 Remote** : {'Oui ✅' if job.get('remote', False) else 'Non ❌'}")
     
     with col2:
-        st.markdown(f"**🎯 Match compétences** : {job['skills_match']:.1f}%")
-        st.markdown(f"**📊 Facteur compétition** : {job['competition_factor']}%")
+        skills_match = job.get('skills_match', score)  # Utiliser le score si pas de skills_match
+        st.markdown(f"**🎯 Match compétences** : {skills_match:.1f}%")
+        competition = job.get('competition_factor', 0)
+        st.markdown(f"**📊 Facteur compétition** : {competition}%")
     
-    # Scores détaillés
-    with st.expander("📊 Voir les scores détaillés"):
-        cols = st.columns(4)
-        cols[0].metric("Compétences", f"{job['skills_match']:.1f}%")
-        cols[1].metric("Expérience", f"{job['experience_match']}%")
-        cols[2].metric("Localisation", f"{job['location_match']}%")
-        cols[3].metric("Compétition", f"{job['competition_factor']}%")
+    # Scores détaillés (si disponibles)
+    if job.get('experience_match') or job.get('location_match'):
+        with st.expander("📊 Voir les scores détaillés"):
+            cols = st.columns(4)
+            cols[0].metric("Compétences", f"{job.get('skills_match', score):.1f}%")
+            cols[1].metric("Expérience", f"{job.get('experience_match', 0)}%")
+            cols[2].metric("Localisation", f"{job.get('location_match', 0)}%")
+            cols[3].metric("Compétition", f"{job.get('competition_factor', 0)}%")
     
-    # Compétences matchées
-    with st.expander("🔧 Compétences matchées"):
-        matching_skills = job.get('matching_skills', [])
-        if matching_skills:
+    # Compétences matchées (si disponibles)
+    matching_skills = job.get('matching_skills', [])
+    if matching_skills:
+        with st.expander("🔧 Compétences matchées"):
             for skill in matching_skills:
                 st.markdown(f"- {skill}")
-        else:
-            st.info("Aucune compétence matchée disponible")
+    else:
+        # Afficher la catégorie si pas de compétences
+        if job.get('category'):
+            st.info(f"📂 Catégorie : {job['category']}")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -506,8 +540,10 @@ def main():
     filtered_recs = recommendations.copy()
     
     # Filtre score
-    filtered_recs = [job for job in filtered_recs if job['score'] >= min_score]
-    
+    filtered_recs = [
+        job for job in filtered_recs 
+        if job.get('score', job.get('faiss_score_percent', 0)) >= min_score
+    ]    
     # Filtre remote
     if remote_filter == "Remote uniquement":
         filtered_recs = [job for job in filtered_recs if job['remote']]
@@ -538,7 +574,8 @@ def main():
     with col4:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         if filtered_recs:
-            st.metric("Meilleur score", f"{filtered_recs[0]['score']:.1f}%")
+            best_score = filtered_recs[0].get('score', filtered_recs[0].get('faiss_score_percent', 0))
+            st.metric("Meilleur score", f"{best_score:.1f}%")
         else:
             st.metric("Meilleur score", "N/A")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -549,10 +586,14 @@ def main():
     
     with col1:
         st.subheader("🎯 Distribution des matches")
-        excellent = len([j for j in filtered_recs if j['score'] >= 70])
-        good = len([j for j in filtered_recs if 50 <= j['score'] < 70])
-        medium = len([j for j in filtered_recs if 40 <= j['score'] < 50])
-        low = len([j for j in filtered_recs if j['score'] < 40])
+        def get_job_score(job):
+            """Récupérer le score d'un job (compatible FAISS)"""
+            return job.get('score', job.get('faiss_score_percent', 0))
+
+        excellent = len([j for j in filtered_recs if get_job_score(j) >= 70])
+        good = len([j for j in filtered_recs if 50 <= get_job_score(j) < 70])
+        medium = len([j for j in filtered_recs if 40 <= get_job_score(j) < 50])
+        low = len([j for j in filtered_recs if get_job_score(j) < 40])
         
         st.markdown(f"🟢 **Excellent match (≥70%)** : {excellent} offres")
         st.markdown(f"🟡 **Bon match (50-70%)** : {good} offres")

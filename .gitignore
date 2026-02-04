@@ -36,6 +36,8 @@ models/*.pth
 models/*.bin
 models/*.joblib
 models/checkpoints/
+models/*.index 
+models/*.faiss 
 
 # Logs
 logs/

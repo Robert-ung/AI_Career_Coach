@@ -17,6 +17,7 @@ import json
 from .cv_parser import CVParser
 from .skills_extractor import SkillsExtractor
 from .job_matcher import JobMatcher
+from .vector_store import load_vector_store  # 🆕 
 
 # ============================================================================
 # CONFIGURATION DE L'APPLICATION
@@ -47,13 +48,15 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).parent.parent
 JOBS_DATASET_PATH = PROJECT_ROOT / "data" / "jobs" / "jobs_dataset.json"
 SKILLS_DB_PATH = PROJECT_ROOT / "data" / "skills_reference.json"
+FAISS_INDEX_PATH = PROJECT_ROOT / "models" / "faiss_jobs.index"  # 🆕
+FAISS_METADATA_PATH = PROJECT_ROOT / "models" / "faiss_jobs_metadata.pkl"  # 🆕
 
 # Cache pour éviter de recharger à chaque requête
 _cv_parser = None
 _skills_extractor = None
 _job_matcher = None
 _jobs_dataset = None
-
+_vector_store = None # 🆕 Ajouter le vector store
 
 def get_cv_parser() -> CVParser:
     """Obtenir le parser de CV (singleton)"""
@@ -92,6 +95,22 @@ def get_jobs_dataset() -> Dict:
             _jobs_dataset = json.load(f)
     return _jobs_dataset
 
+# 🆕 NOUVEAU : Fonction pour charger le vector store FAISS
+def get_vector_store():
+    """Charger le vector store FAISS (singleton)"""
+    global _vector_store
+    if _vector_store is None:
+        if not FAISS_INDEX_PATH.exists() or not FAISS_METADATA_PATH.exists():
+            raise FileNotFoundError(
+                f"Index FAISS non trouvé : {FAISS_INDEX_PATH}\n"
+                "Exécutez le notebook 06_vector_store_setup.ipynb pour créer l'index"
+            )
+        _vector_store = load_vector_store(
+            str(FAISS_INDEX_PATH),
+            str(FAISS_METADATA_PATH)
+        )
+        print(f"✅ Vector Store FAISS chargé : {_vector_store.get_stats()}")
+    return _vector_store
 
 # ============================================================================
 # MODÈLES PYDANTIC (VALIDATION DES RÉPONSES)
@@ -154,7 +173,25 @@ class StatsResponse(BaseModel):
     total_soft_skills: int
     model_used: str
 
+# 🆕 NOUVEAU : Modèle pour les recommandations FAISS
+class FAISSJobRecommendation(BaseModel):
+    job_id: str
+    title: str
+    company: str
+    location: str
+    remote: bool
+    experience_required: str
+    category: str
+    faiss_score: float
+    faiss_score_percent: float
 
+
+class FAISSRecommendationsResponse(BaseModel):
+    recommendations: List[FAISSJobRecommendation]
+    total_jobs_indexed: int
+    search_time_ms: float
+    model_used: str
+    
 # ============================================================================
 # ENDPOINTS
 # ============================================================================
@@ -174,6 +211,7 @@ async def root():
             "stats": "/api/v1/stats",
             "extract_skills": "/api/v1/extract-skills",
             "recommend_jobs": "/api/v1/recommend-jobs",
+            "recommend_jobs_fast": "/api/v1/jobs/recommend-fast",  # 🆕
             "list_jobs": "/api/v1/jobs",
             "get_job": "/api/v1/jobs/{job_id}"
         }
@@ -537,7 +575,103 @@ async def get_stats():
             status_code=500,
             detail=f"Erreur lors de la récupération des statistiques: {str(e)}"
         )
+        
+# ============================================================================
+# 🆕 ENDPOINT FAISS : RECOMMANDATIONS ULTRA-RAPIDES
+# ============================================================================
 
+@app.post("/api/v1/jobs/recommend-fast", response_model=FAISSRecommendationsResponse, tags=["Jobs"])
+async def recommend_jobs_fast(
+    file: UploadFile = File(...),
+    top_k: int = Query(10, ge=1, le=25, description="Nombre de recommandations"),
+    min_score: float = Query(0.3, ge=0.0, le=1.0, description="Score minimum (0-1)")
+):
+    """
+    🚀 Recommandations ultra-rapides avec FAISS
+    
+    Utilise l'index vectoriel pré-calculé pour des recherches instantanées.
+    **10-100x plus rapide** que l'endpoint classique `/recommend-jobs`.
+    
+    Args:
+        file: Fichier PDF du CV
+        top_k: Nombre de recommandations (défaut: 10)
+        min_score: Score minimum de similarité (défaut: 0.3)
+        
+    Returns:
+        Liste des jobs recommandés avec scores FAISS
+    """
+    import time
+    
+    # Vérifier le type de fichier
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(
+            status_code=400,
+            detail="Le fichier doit être un PDF"
+        )
+    
+    tmp_file_path = None
+    
+    try:
+        start_time = time.time()
+        
+        # 1. Sauvegarder temporairement le fichier
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        # 2. Parser le CV
+        parser = get_cv_parser()
+        cv_text = parser.parse(tmp_file_path)
+        
+        if not cv_text or len(cv_text.strip()) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail="Le CV est vide ou illisible"
+            )
+        
+        # 3. 🚀 Recherche FAISS ultra-rapide
+        vector_store = get_vector_store()
+        results = vector_store.search(cv_text, top_k=top_k, min_score=min_score)
+        
+        search_time = (time.time() - start_time) * 1000  # en ms
+        
+        # 4. Formater la réponse
+        recommendations = []
+        for job in results:
+            recommendations.append({
+                "job_id": job.get('job_id', 'N/A'),
+                "title": job.get('title', 'N/A'),
+                "company": job.get('company', 'N/A'),
+                "location": job.get('location', 'N/A'),
+                "remote": job.get('remote_ok', False),
+                "experience_required": job.get('experience', 'N/A'),
+                "category": job.get('category', 'Non spécifié'),
+                "faiss_score": job['faiss_score'],
+                "faiss_score_percent": job['faiss_score_percent']
+            })
+        
+        return {
+            "recommendations": recommendations,
+            "total_jobs_indexed": vector_store.index.ntotal,
+            "search_time_ms": search_time,
+            "model_used": vector_store.model_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la recherche FAISS: {str(e)}"
+        )
+    finally:
+        # Nettoyer le fichier temporaire
+        if tmp_file_path and os.path.exists(tmp_file_path):
+            try:
+                os.unlink(tmp_file_path)
+            except:
+                pass
 
 # ============================================================================
 # GESTION DES ERREURS GLOBALES
@@ -580,6 +714,19 @@ async def startup_event():
         print("⚠️  ATTENTION : Base de compétences manquante")
         print(f"   Chemin attendu : {SKILLS_DB_PATH}")
     
+    # 🆕 Vérifier l'index FAISS
+    if not FAISS_INDEX_PATH.exists() or not FAISS_METADATA_PATH.exists():
+        print("⚠️  ATTENTION : Index FAISS manquant")
+        print(f"   Chemin attendu : {FAISS_INDEX_PATH}")
+        print("   Exécutez : notebooks/06_vector_store_setup.ipynb")
+    else:
+        # Pré-charger le vector store au démarrage
+        try:
+            vs = get_vector_store()
+            print(f"✅ Vector Store FAISS pré-chargé : {vs.get_stats()}")
+        except Exception as e:
+            print(f"⚠️  Erreur lors du chargement FAISS : {e}")
+    
     print("\n✅ API prête à recevoir des requêtes")
     print("📖 Documentation : http://127.0.0.1:8000/docs")
     print("="*60 + "\n")
@@ -589,3 +736,4 @@ async def startup_event():
 async def shutdown_event():
     """Actions à l'arrêt de l'API"""
     print("\n🛑 Arrêt de l'API")
+    
