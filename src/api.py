@@ -13,6 +13,7 @@ import tempfile
 import os
 import json
 from .vector_store import JobVectorStore
+from .interview_simulator import InterviewSimulator, get_interview_simulator
 
 # Import des modules locaux
 from .cv_parser import CVParser
@@ -183,6 +184,34 @@ class StatsResponse(BaseModel):
     total_soft_skills: int
     model_used: str
 
+
+class InterviewRequest(BaseModel):
+    """Requête de simulation d'entretien"""
+    cv_skills: List[str]
+    job_id: str
+    num_questions: int = 8
+
+class InterviewResponse(BaseModel):
+    """Réponse avec questions d'entretien"""
+    job_title: str
+    rh_questions: List[Dict]
+    technical_questions: List[Dict]
+    total_questions: int
+
+class AnswerEvaluationRequest(BaseModel):
+    """Requête d'évaluation de réponse"""
+    question: str
+    answer: str
+    question_type: str
+    target_skill: Optional[str] = None
+
+class AnswerEvaluationResponse(BaseModel):
+    """Réponse d'évaluation"""
+    score: float
+    evaluation: str
+    points_forts: List[str]
+    points_amelioration: List[str]
+    recommandations: List[str]
 
 # ============================================================================
 # ENDPOINTS
@@ -644,6 +673,109 @@ async def get_faiss_stats():
         return JSONResponse(
             status_code=500,
             content={"detail": f"Erreur lors de la récupération des stats FAISS: {str(e)}"}
+        )
+    
+@app.post("/api/v1/simulate-interview", response_model=InterviewResponse, tags=["Interview"])
+async def simulate_interview(request: InterviewRequest):
+    """
+    Générer des questions d'entretien personnalisées avec Groq (Llama 3.1 70B)
+    
+    **Workflow:**
+    1. Récupération de l'offre d'emploi
+    2. Génération de questions RH et techniques par LLM
+    3. Questions adaptées au profil candidat
+    
+    Args:
+        cv_skills: Compétences du candidat
+        job_id: ID de l'offre ciblée
+        num_questions: Nombre de questions (défaut: 8)
+        
+    Returns:
+        Questions RH et techniques générées par IA
+    """
+    try:
+        # Récupérer l'offre
+        dataset = get_jobs_dataset()
+        job = next((j for j in dataset['jobs'] if j['job_id'] == request.job_id), None)
+        
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Offre {request.job_id} introuvable"
+            )
+        
+        # Générer les questions avec Groq
+        simulator = get_interview_simulator()
+        
+        questions = simulator.generate_questions(
+            cv_skills=request.cv_skills,
+            job_title=job['title'],
+            job_description=job['description'],
+            job_requirements=job['requirements'],
+            num_questions=request.num_questions
+        )
+        
+        return {
+            "job_title": job['title'],
+            "rh_questions": questions['rh_questions'],
+            "technical_questions": questions['technical_questions'],
+            "total_questions": len(questions['rh_questions']) + len(questions['technical_questions'])
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur génération questions : {str(e)}"
+        )
+
+
+@app.post("/api/v1/evaluate-answer", response_model=AnswerEvaluationResponse, tags=["Interview"])
+async def evaluate_answer(request: AnswerEvaluationRequest):
+    """
+    Évaluer la réponse d'un candidat avec Groq (Llama 3.1 70B)
+    
+    **Workflow:**
+    1. Analyse de la réponse par LLM
+    2. Scoring automatique (0-100)
+    3. Génération de feedback personnalisé
+    
+    Args:
+        question: Question posée
+        answer: Réponse du candidat
+        question_type: Type de question (présentation, technique, etc.)
+        target_skill: Compétence évaluée (optionnel)
+        
+    Returns:
+        Score, feedback et recommandations d'amélioration
+    """
+    try:
+        # Validation
+        if not request.answer or len(request.answer.strip()) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="La réponse est trop courte (minimum 10 caractères)"
+            )
+        
+        # Évaluer la réponse avec Groq
+        simulator = get_interview_simulator()
+        
+        evaluation = simulator.evaluate_answer(
+            question=request.question,
+            answer=request.answer,
+            question_type=request.question_type,
+            target_skill=request.target_skill
+        )
+        
+        return evaluation
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur évaluation : {str(e)}"
         )
 
 # ============================================================================
