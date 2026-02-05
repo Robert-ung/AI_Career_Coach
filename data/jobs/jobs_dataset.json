@@ -1,0 +1,716 @@
+{
+  "metadata": {
+    "total_jobs": 25,
+    "generated_date": "2026-01-25 18:21:43",
+    "categories": [
+      "ml_engineer",
+      "data_scientist",
+      "python_developer",
+      "devops_engineer",
+      "frontend_developer"
+    ],
+    "description": "Dataset d'offres d'emploi fictives pour matching CV"
+  },
+  "jobs": [
+    {
+      "job_id": "job_001",
+      "category": "ml_engineer",
+      "title": "Junior ML Engineer",
+      "company": "AI Startup Paris",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "0-2 ans",
+      "salary": "35-45K€",
+      "description": "Nous recherchons un Junior ML Engineer passionné pour rejoindre notre équipe R&D.\n\nResponsabilités :\n- Développer des modèles de Machine Learning (classification, régression)\n- Entraîner et optimiser des réseaux de neurones avec PyTorch\n- Déployer des modèles en production avec Docker\n- Participer aux revues de code et à l'amélioration continue\n\nStack technique :\n- Python, PyTorch, scikit-learn\n- Docker, Git\n- FastAPI pour les APIs\n- PostgreSQL",
+      "requirements": [
+        "Python (numpy, pandas, scikit-learn)",
+        "Machine Learning basics (supervised learning)",
+        "Git et GitHub",
+        "Docker (notions de base)",
+        "Anglais technique (lecture documentation)"
+      ],
+      "nice_to_have": [
+        "PyTorch ou TensorFlow",
+        "FastAPI ou Flask",
+        "MLflow",
+        "AWS ou GCP"
+      ],
+      "posted_date": "2026-01-08",
+      "url": "https://example-jobs.com/1",
+      "remote_ok": false,
+      "applicants": 99
+    },
+    {
+      "job_id": "job_002",
+      "category": "ml_engineer",
+      "title": "ML Engineer - Computer Vision",
+      "company": "VisionTech",
+      "location": "Paris (Hybrid)",
+      "type": "CDI",
+      "experience": "1-3 ans",
+      "salary": "40-50K€",
+      "description": "Rejoignez notre équipe Computer Vision pour développer des solutions d'analyse d'images.\n\nMissions :\n- Développer des modèles de Computer Vision (détection d'objets, segmentation)\n- Fine-tuner des modèles pré-entraînés (YOLO, ResNet)\n- Optimiser les performances des modèles pour la production\n- Collaborer avec l'équipe produit\n\nTechnologies :\n- Python, PyTorch, OpenCV\n- CNNs, Transfer Learning\n- Docker, Kubernetes\n- MLOps (MLflow, DVC)",
+      "requirements": [
+        "Deep Learning (CNNs, architectures modernes)",
+        "PyTorch ou TensorFlow",
+        "Computer Vision (OpenCV, PIL)",
+        "Python avancé",
+        "Git, Docker"
+      ],
+      "nice_to_have": [
+        "YOLO, Faster R-CNN",
+        "Kubernetes",
+        "CI/CD",
+        "Cloud (AWS, Azure)"
+      ],
+      "posted_date": "2025-12-30",
+      "url": "https://example-jobs.com/2",
+      "remote_ok": true,
+      "applicants": 72
+    },
+    {
+      "job_id": "job_003",
+      "category": "ml_engineer",
+      "title": "NLP Engineer",
+      "company": "TextAI",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "1-3 ans",
+      "salary": "42-52K€",
+      "description": "Nous cherchons un NLP Engineer pour développer des solutions de traitement du langage naturel.\n\nProjets :\n- Développer des modèles de classification de texte\n- Fine-tuner des LLMs (BERT, GPT)\n- Créer des systèmes de question-answering\n- Implémenter des pipelines NLP en production\n\nStack :\n- Python, HuggingFace Transformers\n- spaCy, NLTK\n- PyTorch\n- FastAPI, Docker\n- Elasticsearch",
+      "requirements": [
+        "NLP (tokenization, embeddings, transformers)",
+        "HuggingFace Transformers",
+        "PyTorch",
+        "Python (pandas, numpy)",
+        "APIs RESTful"
+      ],
+      "nice_to_have": [
+        "Fine-tuning LLMs",
+        "spaCy",
+        "Vector databases (Pinecone, Weaviate)",
+        "Kubernetes"
+      ],
+      "posted_date": "2026-01-13",
+      "url": "https://example-jobs.com/3",
+      "remote_ok": false,
+      "applicants": 95
+    },
+    {
+      "job_id": "job_004",
+      "category": "ml_engineer",
+      "title": "MLOps Engineer",
+      "company": "DataCorp",
+      "location": "Lyon, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "45-55K€",
+      "description": "Rejoignez notre équipe MLOps pour industrialiser le déploiement de modèles ML.\n\nResponsabilités :\n- Créer des pipelines CI/CD pour modèles ML\n- Déployer des modèles en production (Docker, Kubernetes)\n- Monitorer les performances des modèles\n- Optimiser les temps d'inférence\n\nTechnologies :\n- Python, Docker, Kubernetes\n- MLflow, Kubeflow\n- GitLab CI/CD\n- Prometheus, Grafana\n- AWS/GCP",
+      "requirements": [
+        "MLOps (CI/CD pour ML)",
+        "Docker, Kubernetes",
+        "Python",
+        "Cloud (AWS ou GCP)",
+        "Git, GitLab/GitHub Actions"
+      ],
+      "nice_to_have": [
+        "MLflow, Kubeflow",
+        "Terraform",
+        "Monitoring (Prometheus)",
+        "FastAPI"
+      ],
+      "posted_date": "2026-01-06",
+      "url": "https://example-jobs.com/4",
+      "remote_ok": false,
+      "applicants": 99
+    },
+    {
+      "job_id": "job_005",
+      "category": "ml_engineer",
+      "title": "Senior ML Engineer",
+      "company": "BigTech France",
+      "location": "Remote France",
+      "type": "CDI",
+      "experience": "3-5 ans",
+      "salary": "55-70K€",
+      "description": "Nous recherchons un Senior ML Engineer pour mener des projets ML stratégiques.\n\nMissions :\n- Architecturer des solutions ML scalables\n- Encadrer des juniors\n- Participer aux décisions techniques\n- Optimiser les modèles pour la production\n\nStack technique :\n- Python, PyTorch/TensorFlow\n- Kubernetes, Helm\n- AWS (SageMaker, Lambda, S3)\n- Spark pour Big Data\n- MLflow, DVC",
+      "requirements": [
+        "5+ ans en Machine Learning",
+        "Deep Learning avancé",
+        "MLOps et architecture",
+        "Kubernetes en production",
+        "Leadership technique"
+      ],
+      "nice_to_have": [
+        "Publications scientifiques",
+        "Contributions open-source",
+        "Spark, Big Data",
+        "Plusieurs projets ML en production"
+      ],
+      "posted_date": "2026-01-04",
+      "url": "https://example-jobs.com/5",
+      "remote_ok": false,
+      "applicants": 118
+    },
+    {
+      "job_id": "job_006",
+      "category": "data_scientist",
+      "title": "Data Scientist Junior",
+      "company": "Analytics Pro",
+      "location": "Nantes, France",
+      "type": "CDI",
+      "experience": "0-2 ans",
+      "salary": "35-45K€",
+      "description": "Rejoignez notre équipe Data Science pour analyser des données et créer des modèles prédictifs.\n\nMissions :\n- Analyser des datasets et créer des visualisations\n- Développer des modèles prédictifs (régression, classification)\n- Collaborer avec les équipes métier\n- Présenter les résultats aux stakeholders\n\nOutils :\n- Python (pandas, numpy, matplotlib)\n- Jupyter Notebooks\n- scikit-learn\n- SQL\n- Git",
+      "requirements": [
+        "Python (pandas, numpy, matplotlib)",
+        "Machine Learning (scikit-learn)",
+        "SQL",
+        "Statistiques",
+        "Communication (présentation de résultats)"
+      ],
+      "nice_to_have": [
+        "PowerBI ou Tableau",
+        "Feature engineering",
+        "Time series analysis",
+        "A/B testing"
+      ],
+      "posted_date": "2026-01-22",
+      "url": "https://example-jobs.com/6",
+      "remote_ok": true,
+      "applicants": 116
+    },
+    {
+      "job_id": "job_007",
+      "category": "data_scientist",
+      "title": "Data Scientist - Marketing",
+      "company": "MarketingTech",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "1-3 ans",
+      "salary": "40-50K€",
+      "description": "Nous cherchons un Data Scientist pour optimiser nos campagnes marketing.\n\nProjets :\n- Modèles de prédiction de churn\n- Segmentation clients (clustering)\n- Analyse de l'attribution marketing\n- Recommandation de produits\n\nStack :\n- Python, R\n- scikit-learn, XGBoost\n- SQL (PostgreSQL)\n- Tableau/PowerBI\n- Git",
+      "requirements": [
+        "Python et/ou R",
+        "Machine Learning (classification, clustering)",
+        "SQL avancé",
+        "Statistiques et A/B testing",
+        "Visualisation de données"
+      ],
+      "nice_to_have": [
+        "Marketing analytics",
+        "Google Analytics",
+        "Système de recommandation",
+        "Big Data (Spark)"
+      ],
+      "posted_date": "2026-01-04",
+      "url": "https://example-jobs.com/7",
+      "remote_ok": false,
+      "applicants": 25
+    },
+    {
+      "job_id": "job_008",
+      "category": "data_scientist",
+      "title": "Data Scientist - Finance",
+      "company": "FinTech Solutions",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "45-60K€",
+      "description": "Rejoignez notre équipe Data Science pour développer des modèles de risque financier.\n\nResponsabilités :\n- Modèles de scoring de crédit\n- Détection de fraude\n- Prédiction de séries temporelles\n- Reporting réglementaire\n\nTechnologies :\n- Python, scikit-learn, XGBoost\n- Time series (ARIMA, Prophet)\n- SQL, PySpark\n- Git, Docker",
+      "requirements": [
+        "Machine Learning (classification, regression)",
+        "Time series analysis",
+        "Python (pandas, scikit-learn)",
+        "SQL",
+        "Statistiques avancées"
+      ],
+      "nice_to_have": [
+        "Finance/Risk management",
+        "PySpark",
+        "Réglementation RGPD",
+        "Explainability (SHAP)"
+      ],
+      "posted_date": "2026-01-14",
+      "url": "https://example-jobs.com/8",
+      "remote_ok": false,
+      "applicants": 56
+    },
+    {
+      "job_id": "job_009",
+      "category": "data_scientist",
+      "title": "Lead Data Scientist",
+      "company": "DataLab",
+      "location": "Nantes, France",
+      "type": "CDI",
+      "experience": "3-5 ans",
+      "salary": "55-70K€",
+      "description": "Nous recherchons un Lead Data Scientist pour encadrer une équipe de 3-5 personnes.\n\nMissions :\n- Définir la stratégie data science\n- Encadrer et mentorer l'équipe\n- Architecturer les solutions ML\n- Interface avec les équipes métier\n\nStack :\n- Python, R\n- scikit-learn, XGBoost, LightGBM\n- MLflow, DVC\n- Cloud (AWS/GCP)\n- Airflow pour orchestration",
+      "requirements": [
+        "5+ ans en Data Science",
+        "Leadership et encadrement",
+        "ML avancé (ensembles, deep learning)",
+        "MLOps",
+        "Communication avec stakeholders"
+      ],
+      "nice_to_have": [
+        "PhD en ML/Stats",
+        "Publications",
+        "Big Data (Spark)",
+        "Architecture cloud"
+      ],
+      "posted_date": "2026-01-11",
+      "url": "https://example-jobs.com/9",
+      "remote_ok": false,
+      "applicants": 132
+    },
+    {
+      "job_id": "job_010",
+      "category": "data_scientist",
+      "title": "Data Scientist - HealthTech",
+      "company": "MedAI",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "48-58K€",
+      "description": "Rejoignez notre mission d'améliorer la santé par l'IA.\n\nProjets :\n- Analyse d'images médicales\n- Prédiction de pathologies\n- Optimisation de parcours patients\n- Conformité RGPD et données de santé\n\nTechnologies :\n- Python, PyTorch\n- Computer Vision (medical imaging)\n- scikit-learn\n- PostgreSQL\n- Docker",
+      "requirements": [
+        "Machine Learning et/ou Deep Learning",
+        "Python avancé",
+        "Statistiques",
+        "Éthique et RGPD",
+        "Communication avec médecins"
+      ],
+      "nice_to_have": [
+        "Background médical/biologie",
+        "Computer Vision",
+        "Clinical trials analysis",
+        "Explainable AI"
+      ],
+      "posted_date": "2026-01-22",
+      "url": "https://example-jobs.com/10",
+      "remote_ok": false,
+      "applicants": 134
+    },
+    {
+      "job_id": "job_011",
+      "category": "python_developer",
+      "title": "Python Developer Junior",
+      "company": "WebDev Studio",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "0-2 ans",
+      "salary": "32-42K€",
+      "description": "Nous recherchons un développeur Python junior pour rejoindre notre équipe backend.\n\nMissions :\n- Développer des APIs RESTful avec FastAPI\n- Intégrer des bases de données (PostgreSQL)\n- Écrire des tests unitaires\n- Participer aux code reviews\n\nStack :\n- Python 3.10+\n- FastAPI\n- PostgreSQL\n- Docker\n- Git",
+      "requirements": [
+        "Python (bonnes pratiques)",
+        "APIs RESTful",
+        "SQL",
+        "Git",
+        "Tests unitaires (pytest)"
+      ],
+      "nice_to_have": [
+        "FastAPI",
+        "Docker",
+        "CI/CD",
+        "Redis"
+      ],
+      "posted_date": "2026-01-12",
+      "url": "https://example-jobs.com/11",
+      "remote_ok": true,
+      "applicants": 62
+    },
+    {
+      "job_id": "job_012",
+      "category": "python_developer",
+      "title": "Backend Developer Python",
+      "company": "SaaS Company",
+      "location": "Nantes, France",
+      "type": "CDI",
+      "experience": "1-3 ans",
+      "salary": "38-48K€",
+      "description": "Rejoignez notre équipe pour développer notre plateforme SaaS.\n\nResponsabilités :\n- Développer des microservices Python\n- Optimiser les performances\n- Intégrer des APIs tierces\n- Maintenir la qualité du code\n\nTechnologies :\n- Python, FastAPI/Flask\n- PostgreSQL, Redis\n- RabbitMQ ou Kafka\n- Docker, Kubernetes\n- AWS",
+      "requirements": [
+        "Python avancé",
+        "FastAPI ou Flask",
+        "Bases de données (SQL et NoSQL)",
+        "Docker",
+        "APIs RESTful et GraphQL"
+      ],
+      "nice_to_have": [
+        "Microservices",
+        "Message queues (RabbitMQ)",
+        "Kubernetes",
+        "AWS/GCP"
+      ],
+      "posted_date": "2025-12-30",
+      "url": "https://example-jobs.com/12",
+      "remote_ok": false,
+      "applicants": 135
+    },
+    {
+      "job_id": "job_013",
+      "category": "python_developer",
+      "title": "Python Developer - Data Engineering",
+      "company": "BigData Corp",
+      "location": "Bordeaux, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "42-55K€",
+      "description": "Nous cherchons un développeur Python pour construire des pipelines de données.\n\nProjets :\n- Développer des ETL en Python\n- Traiter des volumes de données importants\n- Optimiser les performances des pipelines\n- Déployer sur le cloud\n\nStack :\n- Python (pandas, polars)\n- Airflow\n- Spark (PySpark)\n- PostgreSQL, MongoDB\n- Docker, Kubernetes\n- AWS (S3, Lambda, Glue)",
+      "requirements": [
+        "Python (pandas, numpy)",
+        "ETL et data pipelines",
+        "SQL avancé",
+        "Airflow",
+        "Cloud (AWS ou GCP)"
+      ],
+      "nice_to_have": [
+        "PySpark",
+        "Streaming (Kafka)",
+        "Data modeling",
+        "DBT"
+      ],
+      "posted_date": "2026-01-12",
+      "url": "https://example-jobs.com/13",
+      "remote_ok": true,
+      "applicants": 96
+    },
+    {
+      "job_id": "job_014",
+      "category": "python_developer",
+      "title": "Full Stack Developer Python/React",
+      "company": "TechStartup",
+      "location": "Nantes, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "45-55K€",
+      "description": "Rejoignez notre startup pour développer notre produit full-stack.\n\nResponsabilités :\n- Backend Python (FastAPI)\n- Frontend React\n- Bases de données\n- Déploiement cloud\n\nStack :\n- Python, FastAPI\n- React, TypeScript\n- PostgreSQL\n- Docker, AWS\n- Git, CI/CD",
+      "requirements": [
+        "Python (FastAPI ou Flask)",
+        "React et TypeScript",
+        "SQL",
+        "RESTful APIs",
+        "Git"
+      ],
+      "nice_to_have": [
+        "Next.js",
+        "GraphQL",
+        "Docker/Kubernetes",
+        "AWS"
+      ],
+      "posted_date": "2026-01-24",
+      "url": "https://example-jobs.com/14",
+      "remote_ok": false,
+      "applicants": 94
+    },
+    {
+      "job_id": "job_015",
+      "category": "python_developer",
+      "title": "Senior Python Developer",
+      "company": "Enterprise Tech",
+      "location": "Paris (Hybrid)",
+      "type": "CDI",
+      "experience": "4-6 ans",
+      "salary": "55-70K€",
+      "description": "Nous recherchons un Senior Python Developer pour mener des projets stratégiques.\n\nMissions :\n- Architecturer des applications Python scalables\n- Mentorer des développeurs juniors\n- Optimiser les performances\n- Définir les standards de code\n\nTechnologies :\n- Python 3.11+\n- FastAPI, Django\n- PostgreSQL, MongoDB, Redis\n- Microservices\n- Kubernetes, Helm\n- CI/CD avancé",
+      "requirements": [
+        "6+ ans en Python",
+        "Architecture logicielle",
+        "Microservices",
+        "Leadership technique",
+        "Performance optimization"
+      ],
+      "nice_to_have": [
+        "Contributions open-source",
+        "Conférences/talks",
+        "Multiple frameworks",
+        "Security best practices"
+      ],
+      "posted_date": "2026-01-07",
+      "url": "https://example-jobs.com/15",
+      "remote_ok": true,
+      "applicants": 130
+    },
+    {
+      "job_id": "job_016",
+      "category": "devops_engineer",
+      "title": "DevOps Engineer Junior",
+      "company": "CloudOps",
+      "location": "Lyon, France",
+      "type": "CDI",
+      "experience": "0-2 ans",
+      "salary": "35-45K€",
+      "description": "Rejoignez notre équipe DevOps pour automatiser le déploiement d'applications.\n\nMissions :\n- Créer des pipelines CI/CD\n- Déployer des applications avec Docker\n- Gérer l'infrastructure cloud (AWS)\n- Monitorer les applications\n\nOutils :\n- Docker, Docker Compose\n- GitLab CI/CD ou GitHub Actions\n- AWS (EC2, S3, RDS)\n- Linux\n- Git",
+      "requirements": [
+        "Docker et containerisation",
+        "CI/CD (GitLab ou GitHub Actions)",
+        "Linux (bash scripting)",
+        "Git",
+        "Cloud basics (AWS ou Azure)"
+      ],
+      "nice_to_have": [
+        "Kubernetes",
+        "Terraform",
+        "Ansible",
+        "Python scripting"
+      ],
+      "posted_date": "2026-01-13",
+      "url": "https://example-jobs.com/16",
+      "remote_ok": false,
+      "applicants": 139
+    },
+    {
+      "job_id": "job_017",
+      "category": "devops_engineer",
+      "title": "DevOps Engineer - Kubernetes",
+      "company": "ContainerTech",
+      "location": "Nantes, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "45-55K€",
+      "description": "Nous cherchons un DevOps spécialisé Kubernetes pour gérer notre infrastructure.\n\nResponsabilités :\n- Gérer des clusters Kubernetes\n- Déployer des applications (Helm charts)\n- Monitorer et optimiser les ressources\n- Automatiser avec Terraform\n\nStack :\n- Kubernetes, Helm\n- Docker\n- Terraform, Ansible\n- AWS EKS ou GCP GKE\n- Prometheus, Grafana\n- ArgoCD",
+      "requirements": [
+        "Kubernetes (déploiements, services, ingress)",
+        "Docker avancé",
+        "Terraform ou Ansible",
+        "Cloud (AWS, GCP ou Azure)",
+        "Monitoring (Prometheus)"
+      ],
+      "nice_to_have": [
+        "Helm charts",
+        "GitOps (ArgoCD, Flux)",
+        "Service mesh (Istio)",
+        "CKA certification"
+      ],
+      "posted_date": "2026-01-17",
+      "url": "https://example-jobs.com/17",
+      "remote_ok": true,
+      "applicants": 7
+    },
+    {
+      "job_id": "job_018",
+      "category": "devops_engineer",
+      "title": "SRE Engineer",
+      "company": "ScaleOps",
+      "location": "Paris, France",
+      "type": "CDI",
+      "experience": "3-5 ans",
+      "salary": "50-65K€",
+      "description": "Rejoignez notre équipe SRE pour garantir la fiabilité de nos services.\n\nMissions :\n- Définir et suivre les SLOs\n- Automatiser les tâches opérationnelles\n- Répondre aux incidents\n- Optimiser les performances\n\nTechnologies :\n- Kubernetes, Docker\n- Terraform, Ansible\n- Python, Go\n- Prometheus, Grafana, ELK\n- Cloud (multi-cloud)",
+      "requirements": [
+        "SRE ou DevOps expérimenté",
+        "Kubernetes en production",
+        "Scripting (Python ou Go)",
+        "Monitoring avancé",
+        "Incident management"
+      ],
+      "nice_to_have": [
+        "On-call experience",
+        "Chaos engineering",
+        "Multi-cloud",
+        "Security (DevSecOps)"
+      ],
+      "posted_date": "2026-01-16",
+      "url": "https://example-jobs.com/18",
+      "remote_ok": false,
+      "applicants": 67
+    },
+    {
+      "job_id": "job_019",
+      "category": "devops_engineer",
+      "title": "Platform Engineer",
+      "company": "InfraTech",
+      "location": "Paris, France",
+      "type": "CDI",
+      "experience": "3-5 ans",
+      "salary": "52-68K€",
+      "description": "Nous recherchons un Platform Engineer pour construire notre plateforme interne.\n\nProjets :\n- Créer une plateforme self-service pour les devs\n- Automatiser les déploiements\n- Gérer l'infrastructure as code\n- Améliorer la developer experience\n\nStack :\n- Kubernetes, Helm\n- Terraform, Pulumi\n- GitLab CI/CD\n- ArgoCD\n- Internal Developer Platform (Backstage)",
+      "requirements": [
+        "Kubernetes avancé",
+        "Infrastructure as Code (Terraform)",
+        "CI/CD",
+        "Developer experience",
+        "Scripting (Python, Bash, Go)"
+      ],
+      "nice_to_have": [
+        "Backstage ou similaire",
+        "API design",
+        "Multi-tenancy",
+        "FinOps"
+      ],
+      "posted_date": "2026-01-19",
+      "url": "https://example-jobs.com/19",
+      "remote_ok": false,
+      "applicants": 148
+    },
+    {
+      "job_id": "job_020",
+      "category": "devops_engineer",
+      "title": "Lead DevOps Engineer",
+      "company": "BigCorp",
+      "location": "Paris (Hybrid)",
+      "type": "CDI",
+      "experience": "5-7 ans",
+      "salary": "60-80K€",
+      "description": "Nous recherchons un Lead DevOps pour diriger notre transformation cloud.\n\nResponsabilités :\n- Définir la stratégie DevOps\n- Encadrer une équipe de 5+ engineers\n- Architecturer l'infrastructure\n- Budget et optimisation des coûts cloud\n\nTechnologies :\n- Multi-cloud (AWS, GCP, Azure)\n- Kubernetes, Helm, ArgoCD\n- Terraform\n- Security et compliance\n- FinOps",
+      "requirements": [
+        "7+ ans en DevOps/SRE",
+        "Leadership d'équipe",
+        "Architecture cloud",
+        "Security et compliance",
+        "Budget management"
+      ],
+      "nice_to_have": [
+        "Certifications cloud",
+        "Talks/conférences",
+        "Open-source contributions",
+        "FinOps certified"
+      ],
+      "posted_date": "2026-01-04",
+      "url": "https://example-jobs.com/20",
+      "remote_ok": false,
+      "applicants": 71
+    },
+    {
+      "job_id": "job_021",
+      "category": "frontend_developer",
+      "title": "Frontend Developer Junior",
+      "company": "WebAgency",
+      "location": "Paris (Hybrid)",
+      "type": "CDI",
+      "experience": "0-2 ans",
+      "salary": "30-40K€",
+      "description": "Nous recherchons un développeur frontend junior pour créer des interfaces web modernes.\n\nMissions :\n- Développer des interfaces React\n- Intégrer des maquettes Figma\n- Optimiser les performances\n- Collaborer avec les designers\n\nStack :\n- React, JavaScript\n- HTML5, CSS3, SASS\n- Git\n- Responsive design",
+      "requirements": [
+        "React basics",
+        "JavaScript (ES6+)",
+        "HTML5, CSS3",
+        "Git",
+        "Responsive design"
+      ],
+      "nice_to_have": [
+        "TypeScript",
+        "Next.js",
+        "Tailwind CSS",
+        "Testing (Jest)"
+      ],
+      "posted_date": "2026-01-16",
+      "url": "https://example-jobs.com/21",
+      "remote_ok": true,
+      "applicants": 69
+    },
+    {
+      "job_id": "job_022",
+      "category": "frontend_developer",
+      "title": "React Developer",
+      "company": "SaaS Startup",
+      "location": "Lyon, France",
+      "type": "CDI",
+      "experience": "1-3 ans",
+      "salary": "38-48K€",
+      "description": "Rejoignez notre équipe pour développer notre application SaaS en React.\n\nResponsabilités :\n- Développer des composants React réutilisables\n- Gérer l'état avec Redux/Zustand\n- Intégrer des APIs RESTful\n- Optimiser les performances\n\nTechnologies :\n- React, TypeScript\n- Redux ou Zustand\n- React Query\n- Tailwind CSS\n- Jest, React Testing Library",
+      "requirements": [
+        "React avancé",
+        "TypeScript",
+        "State management (Redux/Zustand)",
+        "APIs RESTful",
+        "Tests unitaires"
+      ],
+      "nice_to_have": [
+        "Next.js",
+        "GraphQL",
+        "Webpack/Vite",
+        "CI/CD"
+      ],
+      "posted_date": "2025-12-27",
+      "url": "https://example-jobs.com/22",
+      "remote_ok": false,
+      "applicants": 104
+    },
+    {
+      "job_id": "job_023",
+      "category": "frontend_developer",
+      "title": "Frontend Developer - Vue.js",
+      "company": "TechCorp",
+      "location": "Toulouse, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "40-50K€",
+      "description": "Nous cherchons un développeur Vue.js pour notre plateforme B2B.\n\nProjets :\n- Développer des interfaces Vue.js 3\n- Créer des composants Vuetify\n- Intégrer des APIs GraphQL\n- Optimiser les bundles\n\nStack :\n- Vue.js 3, Composition API\n- Vuetify ou Quasar\n- Pinia\n- GraphQL (Apollo Client)\n- Vite",
+      "requirements": [
+        "Vue.js 3 (Composition API)",
+        "JavaScript/TypeScript",
+        "State management (Pinia)",
+        "APIs (REST ou GraphQL)",
+        "Build tools (Vite, Webpack)"
+      ],
+      "nice_to_have": [
+        "Nuxt.js",
+        "Testing (Vitest)",
+        "UI libraries (Vuetify)",
+        "Docker"
+      ],
+      "posted_date": "2026-01-04",
+      "url": "https://example-jobs.com/23",
+      "remote_ok": true,
+      "applicants": 96
+    },
+    {
+      "job_id": "job_024",
+      "category": "frontend_developer",
+      "title": "Full Stack JavaScript Developer",
+      "company": "Digital Agency",
+      "location": "Bordeaux, France",
+      "type": "CDI",
+      "experience": "2-4 ans",
+      "salary": "42-55K€",
+      "description": "Rejoignez notre agence pour développer des projets web full-stack.\n\nResponsabilités :\n- Frontend React/Next.js\n- Backend Node.js/Express\n- Bases de données MongoDB\n- Déploiement Vercel/Netlify\n\nTechnologies :\n- React, Next.js\n- Node.js, Express\n- MongoDB, Prisma\n- TypeScript\n- Vercel, AWS",
+      "requirements": [
+        "React et Next.js",
+        "Node.js et Express",
+        "MongoDB ou PostgreSQL",
+        "TypeScript",
+        "APIs RESTful"
+      ],
+      "nice_to_have": [
+        "GraphQL",
+        "Prisma ORM",
+        "Serverless",
+        "Docker"
+      ],
+      "posted_date": "2026-01-09",
+      "url": "https://example-jobs.com/24",
+      "remote_ok": false,
+      "applicants": 93
+    },
+    {
+      "job_id": "job_025",
+      "category": "frontend_developer",
+      "title": "Lead Frontend Developer",
+      "company": "Enterprise UI",
+      "location": "Paris (Hybrid)",
+      "type": "CDI",
+      "experience": "4-6 ans",
+      "salary": "55-70K€",
+      "description": "Nous recherchons un Lead Frontend pour encadrer notre équipe UI.\n\nMissions :\n- Architecturer les applications frontend\n- Définir les standards de code\n- Mentorer l'équipe (3-5 devs)\n- Optimiser les performances\n\nStack :\n- React, TypeScript\n- Micro-frontends\n- Monorepo (Nx, Turborepo)\n- Testing avancé\n- CI/CD",
+      "requirements": [
+        "6+ ans en frontend",
+        "Architecture frontend",
+        "Leadership technique",
+        "Performance optimization",
+        "Micro-frontends"
+      ],
+      "nice_to_have": [
+        "Monorepo expertise",
+        "Web Vitals expert",
+        "Accessibility (WCAG)",
+        "Design systems"
+      ],
+      "posted_date": "2026-01-15",
+      "url": "https://example-jobs.com/25",
+      "remote_ok": false,
+      "applicants": 50
+    }
+  ]
+}
