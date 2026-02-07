@@ -489,6 +489,7 @@ async def recommend_jobs(
 async def list_jobs(
     category: Optional[str] = Query(None, description="Filtrer par catégorie"),
     remote: Optional[bool] = Query(None, description="Filtrer par télétravail"),
+    experience: Optional[str] = Query(None, description="Filtrer par niveau d'expérience"),
     limit: int = Query(25, ge=1, le=100, description="Nombre maximum de résultats")
 ):
     """
@@ -519,6 +520,13 @@ async def list_jobs(
             filtered_jobs = [
                 job for job in filtered_jobs 
                 if job.get('remote_ok', False) == remote
+            ]
+
+        # Filtre expérience
+        if experience:
+            filtered_jobs = [
+                job for job in filtered_jobs 
+                if job.get('experience', '').lower() == experience.lower()
             ]
         
         # Limiter le nombre de résultats

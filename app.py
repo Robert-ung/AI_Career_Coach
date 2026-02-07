@@ -483,15 +483,36 @@ def main():
         min_value=0,
         max_value=100,
         value=40,
-        step=5
+        step=5,
+        help="Afficher uniquement les offres avec un score ≥ ce seuil"
     )
     
     # Filtre Remote
     remote_filter = st.sidebar.radio(
         "Type de travail",
         options=["Tous", "Remote uniquement", "On-site uniquement"],
-        index=0
+        index=0,
+        help="Filtrer par mode de travail"
     )
+
+    # Filtre par niveau d'expérience
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💼 Niveau d'expérience")
+    
+    # Extraire les niveaux uniques
+    all_experience_levels = sorted(list(set(job['experience_required'] for job in recommendations)))
+    
+    # Multiselect
+    selected_experiences = st.sidebar.multiselect(
+        "Sélectionnez un ou plusieurs niveaux",
+        options=all_experience_levels,
+        default=all_experience_levels,  # Tous sélectionnés par défaut
+        help="Maintenez Ctrl (Windows) ou Cmd (Mac) pour sélectionner plusieurs niveaux"
+    )
+    
+    # Si rien n'est sélectionné, afficher tous
+    if not selected_experiences:
+        selected_experiences = all_experience_levels
     
     # Appliquer les filtres
     filtered_recs = recommendations.copy()
@@ -504,6 +525,9 @@ def main():
         filtered_recs = [job for job in filtered_recs if job['remote']]
     elif remote_filter == "On-site uniquement":
         filtered_recs = [job for job in filtered_recs if not job['remote']]
+
+    # Filtre expérience
+    filtered_recs = [job for job in filtered_recs if job['experience_required'] in selected_experiences]
     
     # Statistiques globales
     st.markdown("---")
