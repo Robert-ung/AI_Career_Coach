@@ -350,12 +350,12 @@ async def recommend_jobs(
 ):
     """
     Obtenir des recommandations d'emploi basées sur un CV
-    SCORING BASÉ UNIQUEMENT SUR LES COMPÉTENCES
+    SCORING BASÉ SUR APPROCHE 4 : Coverage + Quality
     
     **Workflow :**
     1. Extraction des compétences du CV
     2. Si use_faiss=True : Pré-filtrage rapide avec FAISS (top 50)
-    3. Scoring par compétences avec JobMatcher
+    3. Scoring détaillé avec JobMatcher (Approche 4)
     4. Tri et filtrage final
     
     Args:
@@ -365,7 +365,7 @@ async def recommend_jobs(
         use_faiss: Utiliser FAISS (défaut: False)
         
     Returns:
-        Liste des jobs recommandés avec scores
+        Liste des jobs recommandés avec scores détaillés
     """
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Le fichier doit être un PDF")
@@ -410,12 +410,21 @@ async def recommend_jobs(
             dataset = get_jobs_dataset()
             candidate_jobs = dataset['jobs']
         
-        # 4. Scoring avec JobMatcher (compétences uniquement)
+        # 4. Scoring avec JobMatcher (Approche 4)
         matcher = get_job_matcher()
         detailed_results = []
         
         for job in candidate_jobs:
+            # ✅ Calcul du score avec Approche 4
             detailed_score = matcher.calculate_job_match_score(cv_skills, job)
+            
+            # ✅ Extraire les skills matchés depuis top_matches
+            matching_skills = []
+            for match in detailed_score['skills_details']['top_matches']:
+                # Format : "python (100.0%)" ou "job_skill ↔ cv_skill (sim%)"
+                matching_skills.append(
+                    f"{match['job_skill']} ↔ {match['cv_skill']} ({match['similarity']:.0f}%)"
+                )
             
             detailed_results.append({
                 'job_id': job['job_id'],
@@ -424,9 +433,9 @@ async def recommend_jobs(
                 'location': job['location'],
                 'remote_ok': job.get('remote_ok', False),
                 'experience': job['experience'],
-                'score': detailed_score['score'],  # Score unique
-                'skills_details': detailed_score['skills_details'],
-                'matching_skills': detailed_score['skills_details']['top_skills'][:10]
+                'score': detailed_score['score'],  # ✅ Score global
+                'skills_details': detailed_score['skills_details'],  # ✅ Détails complets
+                'matching_skills': matching_skills[:10]  # ✅ Top 10 matchs formatés
             })
         
         # 5. Tri par score
@@ -448,12 +457,12 @@ async def recommend_jobs(
                 "location": job['location'],
                 "remote": job['remote_ok'],
                 "experience_required": job['experience'],
-                "score": job['score'],
-                "skills_match": job['score'],  # Même valeur
-                "experience_match": 0,  # Toujours 0
-                "location_match": 0,  # Toujours 0
-                "competition_factor": 0,  # Toujours 0
-                "matching_skills": job['matching_skills']
+                "score": job['score'],  # ✅ Score global unique
+                "skills_match": job['score'],  # ✅ Même valeur (compatibilité frontend)
+                "experience_match": 0,  # Deprecated (compatibilité)
+                "location_match": 0,  # Deprecated (compatibilité)
+                "competition_factor": 0,  # Deprecated (compatibilité)
+                "matching_skills": job['matching_skills']  # ✅ Liste formatée
             })
         
         return {
@@ -475,7 +484,7 @@ async def recommend_jobs(
                 os.unlink(tmp_file_path)
             except:
                 pass
-            
+
 @app.get("/api/v1/jobs", response_model=List[JobDetail], tags=["Jobs"])
 async def list_jobs(
     category: Optional[str] = Query(None, description="Filtrer par catégorie"),

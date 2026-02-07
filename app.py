@@ -322,7 +322,6 @@ def display_job_card(job, rank):
     
     with col2:
         st.markdown(f"**🎯 Score de matching** : {score:.1f}%")
-        st.markdown(f"**Basé sur** : Compétences uniquement")
     
     # Compétences matchées
     with st.expander("🔧 Compétences matchées"):
