@@ -362,6 +362,23 @@ def display_job_card(job, rank):
             st.markdown("---")
             st.info("💡 **Conseil** : Ajoutez ces compétences à votre CV ou suivez une formation pour améliorer votre score !")
 
+    # NOUVEAU : Bouton simulation d'entretien
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button(f"🎤 Simuler un entretien", key=f"interview_{job['job_id']}", use_container_width=True):
+            # Sauvegarder le job_id dans session_state
+            st.session_state.selected_job_for_interview = job['job_id']
+            # Rediriger vers la page interview
+            st.switch_page("pages/1_Interview_Simulator.py")
+    
+    with col2:
+        if st.button(f"📄 Voir l'offre complète", key=f"details_{job['job_id']}", use_container_width=True):
+            st.info("Fonctionnalité en développement")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ============================================================================
 # APPLICATION PRINCIPALE
