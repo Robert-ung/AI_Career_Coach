@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 MLFLOW_TRACKING_URI = PROJECT_ROOT / "mlops" / "mlflow_tracking"
 
 # Charger les données
-data_path = Path('../data/resume_fit_job/processed/v2_dataset_resume_job_fit_processed.xlsx')
+data_path = PROJECT_ROOT / "data" / "resume_fit_job" / "processed" / "v2_dataset_resume_job_fit_processed.xlsx"
 df = pd.read_excel(data_path)
 
 # Préparer les données

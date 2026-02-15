@@ -37,6 +37,10 @@ models/*.bin
 models/*.joblib
 models/checkpoints/
 
+# MLflow tracking (expériences, runs, métriques)
+mlops/mlflow_tracking/
+mlops/mlflow_models/
+
 # Logs
 logs/
 *.log
