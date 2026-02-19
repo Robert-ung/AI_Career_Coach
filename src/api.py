@@ -14,6 +14,7 @@ import os
 import json
 import logging
 from datetime import datetime
+import joblib
 
 # ============================================================================
 # ✅ CHARGEMENT DES VARIABLES D'ENVIRONNEMENT (AVANT TOUS LES IMPORTS)
@@ -75,6 +76,7 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).parent.parent
 JOBS_DATASET_PATH = PROJECT_ROOT / "data" / "jobs" / "jobs_dataset.json"
 SKILLS_DB_PATH = PROJECT_ROOT / "data" / "skills_reference.json"
+ML_MODEL_PATH = PROJECT_ROOT / "models" / "ml_classifier_clean_v1.pkl" 
 
 # Cache pour éviter de recharger à chaque requête
 _cv_parser = None
@@ -82,7 +84,7 @@ _skills_extractor = None
 _job_matcher = None
 _jobs_dataset = None
 _vector_store = None
-
+_ml_classifier = None 
 
 def get_cv_parser() -> CVParser:
     """Obtenir le parser de CV (singleton)"""
@@ -152,6 +154,25 @@ def get_vector_store() -> JobVectorStore:
             logger.info("✅ Index FAISS construit et sauvegardé")
     
     return _vector_store
+
+def get_ml_classifier():
+    """Obtenir le modèle ML XGBoost (singleton)"""
+    global _ml_classifier
+    if _ml_classifier is None:
+        if ML_MODEL_PATH.exists():
+            try:
+                _ml_classifier = joblib.load(ML_MODEL_PATH)
+                logger.info(f"✅ Modèle ML chargé : {ML_MODEL_PATH}")
+                logger.info(f"   • Type : {type(_ml_classifier)}")
+                logger.info(f"   • Features : {_ml_classifier.n_features_in_}")
+            except Exception as e:
+                logger.error(f"❌ Erreur chargement modèle ML : {e}")
+                _ml_classifier = None
+        else:
+            logger.warning(f"⚠️ Modèle ML non trouvé : {ML_MODEL_PATH}")
+            _ml_classifier = None
+    return _ml_classifier
+
 
 # ============================================================================
 # MODÈLES PYDANTIC (VALIDATION DES RÉPONSES)
@@ -291,7 +312,11 @@ async def health_check():
     try:
         dataset = get_jobs_dataset()
         jobs_count = len(dataset.get('jobs', []))
-        models_loaded = _job_matcher is not None and _skills_extractor is not None
+        models_loaded = (
+            _job_matcher is not None and 
+            _skills_extractor is not None and
+            _ml_classifier is not None  # ← AJOUTER
+        )
         
         return {
             "status": "healthy",
@@ -997,6 +1022,33 @@ async def startup_event():
     
     if not SKILLS_DB_PATH.exists():
         logger.warning(f"⚠️  Base de compétences manquante: {SKILLS_DB_PATH}")
+
+    # ✅ AJOUTER : Pré-charger le modèle ML
+    logger.info("⏳ Chargement des modèles...")
+    
+    try:
+        # Forcer le chargement du JobMatcher
+        _ = get_job_matcher()
+        logger.info("✅ JobMatcher chargé")
+    except Exception as e:
+        logger.error(f"❌ Erreur JobMatcher : {e}")
+    
+    try:
+        # Forcer le chargement du SkillsExtractor
+        _ = get_skills_extractor()
+        logger.info("✅ SkillsExtractor chargé")
+    except Exception as e:
+        logger.error(f"❌ Erreur SkillsExtractor : {e}")
+    
+    try:
+        # Forcer le chargement du modèle ML
+        ml_model = get_ml_classifier()
+        if ml_model is not None:
+            logger.info("✅ Modèle ML chargé avec succès")
+        else:
+            logger.warning("⚠️ Modèle ML non disponible (fonctionnement en mode dégradé)")
+    except Exception as e:
+        logger.error(f"❌ Erreur chargement modèle ML : {e}")
     
     # Pré-charger FAISS au démarrage
     logger.info("⏳ Pré-chargement du vector store FAISS...")
