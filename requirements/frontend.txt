@@ -1,0 +1,13 @@
+# Dépendances Frontend Streamlit
+
+# Hérite des dépendances de base
+-r base.txt
+
+# UI Framework
+streamlit==1.29.0
+
+# HTTP Client
+requests==2.31.0
+
+# Data visualization
+plotly==5.18.0

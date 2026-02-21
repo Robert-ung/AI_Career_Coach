@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Jupyter
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
+
+# Tests
+tests/
+pytest_cache/
+.coverage
+
+# MLflow trash
+mlops/mlflow_tracking/.trash/
+
+# Docker
+docker-compose*.yml
+*.md
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - optionnel pour ce test
+  postgres:
+    image: postgres:15-alpine
+    container_name: pfe-postgres
+    environment:
+      POSTGRES_USER: pfe_user
+      POSTGRES_PASSWORD: pfe_password
+      POSTGRES_DB: pfe_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pfe-network
+    restart: unless-stopped
+
+  # Streamlit - TEST
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/streamlit.Dockerfile
+    container_name: pfe-streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./pages:/app/pages
+      - ./app.py:/app/app.py
+      - ./src:/app/src
+      - ./data:/app/data
+    networks:
+      - pfe-network
+    environment:
+      PYTHONUNBUFFERED: '1'
+      API_BASE_URL: http://localhost:8000  # ⚠️ API pas dispo = OK pour test
+    restart: unless-stopped
+
+networks:
+  pfe-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
