@@ -33,6 +33,7 @@ class MLPredictor:
         self.model = None
         self.scaler = None
         self._loaded = False
+        self._text_emb_cache = {}
         self._load_model()
 
     def _load_model(self):
@@ -62,7 +63,8 @@ class MLPredictor:
         cv_soft_skills: List[str],
         job_technical_skills: List[str],   # ✅ CHANGÉ : séparé technical/soft
         job_soft_skills: List[str],         # ✅ CHANGÉ : séparé technical/soft
-        skills_details: Dict,               # ✅ CHANGÉ : directement skills_details de JobMatcher
+        # ✅ CHANGÉ : directement skills_details de JobMatcher
+        skills_details: Dict,
         cv_raw_text: str,                   # ✅ AJOUT : texte brut du CV
         job_raw_text: str,                  # ✅ AJOUT : texte brut du Job
         sentence_model                      # SentenceTransformer de JobMatcher
@@ -88,7 +90,10 @@ class MLPredictor:
         coverage = float(skills_details.get('coverage', 0.0))
         quality = float(skills_details.get('quality', 0.0))
         nb_covered_skills = int(skills_details.get('covered_count', 0))
-        total_required = int(skills_details.get('total_required', len(job_all_skills)))
+        total_required = int(
+            skills_details.get(
+                'total_required',
+                len(job_all_skills)))
         nb_missing_skills = total_required - nb_covered_skills
         skills_ratio = len(cv_all_skills) / max(len(job_all_skills), 1)
 
@@ -122,17 +127,21 @@ class MLPredictor:
 
         # ── 4. Embedding similarity sur TEXTE COMPLET (comme compute_features) ──
         try:
-            embeddings = sentence_model.encode(
-                [cv_raw_text, job_raw_text],
-                show_progress_bar=False
-            )
+            if cv_raw_text not in self._text_emb_cache:
+                self._text_emb_cache[cv_raw_text] = sentence_model.encode(cv_raw_text, show_progress_bar=False)
+            if job_raw_text not in self._text_emb_cache:
+                self._text_emb_cache[job_raw_text] = sentence_model.encode(job_raw_text, show_progress_bar=False)
+
+            cv_emb = self._text_emb_cache[cv_raw_text]
+            job_emb = self._text_emb_cache[job_raw_text]
+
             embedding_similarity = float(
-                cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+                cosine_similarity([cv_emb], [job_emb])[0][0]
             )
         except Exception:
             embedding_similarity = 0.0
 
-        # ── 5. Features Contexte ──────────────────────────────────────────────
+        # ── 5. Features Contexte ─────────────────────────────────────────────
         nb_resume_technical = len(cv_technical_skills)
         nb_resume_soft = len(cv_soft_skills)
         nb_job_technical = len(job_technical_skills)   # ✅ CORRECTION
