@@ -13,19 +13,20 @@ if experiment is None:
     print("❌ Expérience 'job-matcher-ml' non trouvée!")
     exit(1)
 
+# ✅ CHANGÉ : trier par date (le plus récent en premier) au lieu de test_accuracy
 runs = mlflow.search_runs(
     experiment_ids=[experiment.experiment_id],
-    order_by=["metrics.test_accuracy DESC"]
+    order_by=["start_time DESC"]   # ← plus récent en premier
 )
 
 if runs.empty:
     print("❌ Aucun run trouvé!")
     exit(1)
 
-best_run_id = runs.iloc[0]['run_id']
+best_run_id  = runs.iloc[0]['run_id']
 best_accuracy = runs.iloc[0]['metrics.test_accuracy']
 
-print(f"🏆 Meilleur modèle : Run ID = {best_run_id}")
+print(f"🏆 Dernier run : Run ID = {best_run_id}")
 print(f"   Accuracy = {best_accuracy:.4f}")
 
 model_name = "job-matcher-classifier"

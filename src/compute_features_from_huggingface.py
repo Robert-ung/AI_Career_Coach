@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 import pandas as pd
 import numpy as np
+import re
 from tqdm import tqdm
 import logging
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -64,7 +65,7 @@ print("✅ Modules initialisés avec succès\n")
 # ===== CHARGEMENT DU DATASET =====
 print("📥 Chargement du dataset...")
 
-csv_path = Path('data/processed/huggingface_resume_job_fit.xlsx')
+csv_path = Path('data/resume_fit_job/processed/huggingface_resume_job_fit.xlsx')
 
 if not csv_path.exists():
     print(f"❌ Fichier non trouvé : {csv_path}")
@@ -138,23 +139,48 @@ job_tfidf = tfidf_vectorizer.transform(job_texts)
 print("✅ TF-IDF pré-calculés\n")
 
 # ===== FONCTION D'EXTRACTION DE FEATURES =====
+def compute_text_features(text):
+    """
+    Calculer les 6 features textuelles pour un texte donné
+    """
+    if not text or pd.isna(text):
+        return {
+            'text_length': 0,
+            'text_word_count': 0,
+            'text_unique_words': 0,
+            'text_avg_word_length': 0.0,
+            'text_sentence_count': 0,
+            'text_capital_ratio': 0.0
+        }
+    
+    text = str(text)
+    words = text.split()
+    
+    return {
+        'text_length':        len(text),
+        'text_word_count':    len(words),
+        'text_unique_words':  len(set(w.lower() for w in words)),
+        'text_avg_word_length': float(np.mean([len(w) for w in words])) if words else 0.0,
+        'text_sentence_count': len(re.findall(r'[.!?]+', text)),
+        'text_capital_ratio':  sum(1 for c in text if c.isupper()) / len(text) if len(text) > 0 else 0.0
+    }
+
 def compute_features_for_row(row, row_idx):
     """
-    Calculer les 15 features ML PERTINENTES pour une paire (CV, Job)
+    Calculer les 27 features ML pour une paire (CV, Job)
     
     Features calculées :
     - Skills Matching (5) : coverage, quality, nb_covered_skills, nb_missing_skills, skills_ratio
-    - Similarité (4) : similarity_mean, similarity_max, similarity_std, top3_similarity_avg
-    - Sémantique (2) : tfidf_similarity, embedding_similarity
-    - Contexte (4) : nb_resume_technical, nb_resume_soft, nb_job_technical, nb_job_soft
-    
-    Args:
-        row: Ligne du DataFrame pandas
-        row_idx: Index de la ligne (pour accès aux embeddings)
-        
-    Returns:
-        dict avec les 15 features
+    - Similarité (4)      : similarity_mean, similarity_max, similarity_std, top3_similarity_avg
+    - Sémantique (2)      : tfidf_similarity, embedding_similarity
+    - Contexte (4)        : nb_resume_technical, nb_resume_soft, nb_job_technical, nb_job_soft
+    - Texte CV (6)        : resume_text_length, resume_text_word_count, ...
+    - Texte Job (6)       : job_description_text_length, job_description_text_word_count, ...
     """
+
+    THRESHOLD_STRICT   = 65
+    THRESHOLD_MODERATE = 40
+    
     try:
         # ===== 1. EXTRACTION DES SKILLS =====
         cv_result = skills_extractor.extract_from_cv(str(row['resume']))
@@ -173,134 +199,147 @@ def compute_features_for_row(row, row_idx):
         nb_job_technical = len(job_technical)
         nb_job_soft = len(job_soft)
         
-        # ===== 3. GESTION DES CAS VIDES =====
-        if len(cv_skills_list) == 0 or len(job_skills_list) == 0:
-            # Calculer quand même les similarités sémantiques
-            tfidf_sim = cosine_similarity(resume_tfidf[row_idx], job_tfidf[row_idx])[0][0]
-            embedding_sim = cosine_similarity(
-                resume_embeddings[row_idx].reshape(1, -1),
-                job_embeddings[row_idx].reshape(1, -1)
-            )[0][0]
-            
-            return {
-                # Skills Matching
-                'coverage': 0.0,
-                'quality': 0.0,
-                'nb_covered_skills': 0,
-                'nb_missing_skills': len(job_skills_list),
-                'skills_ratio': 0.0,
-                
-                # Similarité
-                'similarity_mean': 0.0,
-                'similarity_max': 0.0,
-                'similarity_std': 0.0,
-                'top3_similarity_avg': 0.0,
-                
-                # Sémantique
-                'tfidf_similarity': float(tfidf_sim),
-                'embedding_similarity': float(embedding_sim),
-                
-                # Contexte
-                'nb_resume_technical': nb_resume_technical,
-                'nb_resume_soft': nb_resume_soft,
-                'nb_job_technical': nb_job_technical,
-                'nb_job_soft': nb_job_soft
-            }
-        
-        # ===== 4. CALCUL DU MATCHING AVEC JobMatcher =====
-        job_structure = {
-            'job_id': f'job_{row_idx}',
-            'title': 'Job Title',
-            'requirements': job_skills_list,
-            'nice_to_have': []
-        }
-        
-        match_result = job_matcher.calculate_job_match_score(cv_skills_list, job_structure)
-        skills_details = match_result.get('skills_details', {})
-        
-        # ===== 5. FEATURES SKILLS MATCHING (5 features) =====
-        coverage = skills_details.get('coverage', 0.0)
-        quality = skills_details.get('quality', 0.0)
-        nb_covered_skills = skills_details.get('covered_count', 0)
-        total_required = skills_details.get('total_required', len(job_skills_list))
-        nb_missing_skills = total_required - nb_covered_skills
-        skills_ratio = len(cv_skills_list) / max(len(job_skills_list), 1)
-        
-        # ===== 6. FEATURES SIMILARITÉ (4 features) =====
-        top_matches = skills_details.get('top_matches', [])
-        
-        if top_matches and len(top_matches) > 0:
-            similarities = [m.get('similarity', 0.0) for m in top_matches]
-            
-            similarity_mean = np.mean(similarities)
-            similarity_max = np.max(similarities)
-            similarity_std = np.std(similarities)
-            
-            # Top 3 moyenne
-            top3 = sorted(similarities, reverse=True)[:3]
-            top3_similarity_avg = np.mean(top3)
-        else:
-            similarity_mean = 0.0
-            similarity_max = 0.0
-            similarity_std = 0.0
-            top3_similarity_avg = 0.0
-        
-        # ===== 7. FEATURES SÉMANTIQUES (2 features) =====
-        # TF-IDF similarity (depuis pré-calcul)
+        # ===== 3. FEATURES SÉMANTIQUES (pré-calculées) =====
         tfidf_sim = cosine_similarity(resume_tfidf[row_idx], job_tfidf[row_idx])[0][0]
-        
-        # Embedding similarity (depuis pré-calcul)
         embedding_sim = cosine_similarity(
             resume_embeddings[row_idx].reshape(1, -1),
             job_embeddings[row_idx].reshape(1, -1)
         )[0][0]
+
+        # ===== 4. FEATURES TEXTUELLES (12 features) =====
+        resume_text_feats = compute_text_features(row['resume'])
+        job_text_feats    = compute_text_features(row['job_description'])
+
+        # ===== 5. GESTION DES CAS VIDES =====
+        if len(cv_skills_list) == 0 or len(job_skills_list) == 0:
+            return {
+                # Skills Matching
+                'coverage': 0.0, 'quality': 0.0,
+                'nb_covered_skills': 0,
+                'nb_missing_skills': len(job_skills_list),
+                'skills_ratio': 0.0,
+                # Similarité
+                'similarity_mean': 0.0, 'similarity_max': 0.0,
+                'similarity_std': 0.0, 'top3_similarity_avg': 0.0,
+                # Sémantique
+                'tfidf_similarity': float(tfidf_sim),
+                'embedding_similarity': float(embedding_sim),
+                # Contexte
+                'nb_resume_technical': nb_resume_technical,
+                'nb_resume_soft': nb_resume_soft,
+                'nb_job_technical': nb_job_technical,
+                'nb_job_soft': nb_job_soft,
+                # Texte CV (6)
+                'resume_text_length':           resume_text_feats['text_length'],
+                'resume_text_word_count':        resume_text_feats['text_word_count'],
+                'resume_text_unique_words':      resume_text_feats['text_unique_words'],
+                'resume_text_avg_word_length':   resume_text_feats['text_avg_word_length'],
+                'resume_text_sentence_count':    resume_text_feats['text_sentence_count'],
+                'resume_text_capital_ratio':     resume_text_feats['text_capital_ratio'],
+                # Texte Job (6)
+                'job_description_text_length':           job_text_feats['text_length'],
+                'job_description_text_word_count':        job_text_feats['text_word_count'],
+                'job_description_text_unique_words':      job_text_feats['text_unique_words'],
+                'job_description_text_avg_word_length':   job_text_feats['text_avg_word_length'],
+                'job_description_text_sentence_count':    job_text_feats['text_sentence_count'],
+                'job_description_text_capital_ratio':     job_text_feats['text_capital_ratio'],
+            }
         
-        # ===== 8. RETOUR DES 15 FEATURES =====
+        # ===== 6. MATCHING SKILL PAR SKILL (seuils 65% / 40%) =====
+        cv_embs  = embedding_model.encode([s.lower() for s in cv_skills_list],  show_progress_bar=False)
+        job_embs = embedding_model.encode([s.lower() for s in job_skills_list], show_progress_bar=False)
+
+        similarities = []
+        nb_covered_skills = 0
+        nb_missing_count  = 0
+
+        for i, job_skill in enumerate(job_skills_list):
+            best_sim = 0.0
+
+            for cv_skill in cv_skills_list:
+                if cv_skill.lower() == job_skill.lower():
+                    best_sim = 100.0
+                    break
+
+            if best_sim < 100.0:
+                sims = cosine_similarity([job_embs[i]], cv_embs)[0] * 100
+                best_sim = float(np.max(sims))
+
+            similarities.append(best_sim)
+
+            if best_sim >= THRESHOLD_STRICT:   nb_covered_skills += 1
+            if best_sim <  THRESHOLD_MODERATE: nb_missing_count  += 1
+
+        sim_array = np.array(similarities)
+        n_job     = len(job_skills_list)
+
+        # ===== 7. FEATURES SKILLS MATCHING (5 features) =====
+        coverage          = (nb_covered_skills / n_job) * 100
+        covered_sims      = [s for s in similarities if s >= THRESHOLD_STRICT]
+        quality           = float(np.mean(covered_sims)) if covered_sims else 0.0
+        nb_missing_skills = nb_missing_count
+        skills_ratio      = len(cv_skills_list) / max(n_job, 1)
+
+        # ===== 8. FEATURES SIMILARITÉ (4 features) =====
+        similarity_mean     = float(sim_array.mean())
+        similarity_max      = float(sim_array.max())
+        similarity_std      = float(sim_array.std())
+        top3                = sorted(similarities, reverse=True)[:3]
+        top3_similarity_avg = float(np.mean(top3))
+
+        # ===== 9. RETOUR DES 27 FEATURES =====
         return {
             # Skills Matching (5)
-            'coverage': float(coverage),
-            'quality': float(quality),
-            'nb_covered_skills': int(nb_covered_skills),
-            'nb_missing_skills': int(nb_missing_skills),
-            'skills_ratio': float(skills_ratio),
-            
+            'coverage':            float(coverage),
+            'quality':             float(quality),
+            'nb_covered_skills':   int(nb_covered_skills),
+            'nb_missing_skills':   int(nb_missing_skills),
+            'skills_ratio':        float(skills_ratio),
             # Similarité (4)
-            'similarity_mean': float(similarity_mean),
-            'similarity_max': float(similarity_max),
-            'similarity_std': float(similarity_std),
+            'similarity_mean':     float(similarity_mean),
+            'similarity_max':      float(similarity_max),
+            'similarity_std':      float(similarity_std),
             'top3_similarity_avg': float(top3_similarity_avg),
-            
             # Sémantique (2)
-            'tfidf_similarity': float(tfidf_sim),
+            'tfidf_similarity':    float(tfidf_sim),
             'embedding_similarity': float(embedding_sim),
-            
             # Contexte (4)
             'nb_resume_technical': int(nb_resume_technical),
-            'nb_resume_soft': int(nb_resume_soft),
-            'nb_job_technical': int(nb_job_technical),
-            'nb_job_soft': int(nb_job_soft)
+            'nb_resume_soft':      int(nb_resume_soft),
+            'nb_job_technical':    int(nb_job_technical),
+            'nb_job_soft':         int(nb_job_soft),
+            # Texte CV (6)
+            'resume_text_length':           resume_text_feats['text_length'],
+            'resume_text_word_count':        resume_text_feats['text_word_count'],
+            'resume_text_unique_words':      resume_text_feats['text_unique_words'],
+            'resume_text_avg_word_length':   resume_text_feats['text_avg_word_length'],
+            'resume_text_sentence_count':    resume_text_feats['text_sentence_count'],
+            'resume_text_capital_ratio':     resume_text_feats['text_capital_ratio'],
+            # Texte Job (6)
+            'job_description_text_length':           job_text_feats['text_length'],
+            'job_description_text_word_count':        job_text_feats['text_word_count'],
+            'job_description_text_unique_words':      job_text_feats['text_unique_words'],
+            'job_description_text_avg_word_length':   job_text_feats['text_avg_word_length'],
+            'job_description_text_sentence_count':    job_text_feats['text_sentence_count'],
+            'job_description_text_capital_ratio':     job_text_feats['text_capital_ratio'],
         }
     
     except Exception as e:
         logger.error(f"⚠️ Erreur ligne {row_idx} : {e}")
-        
-        # Retourner features par défaut
         return {
-            'coverage': 0.0,
-            'quality': 0.0,
-            'nb_covered_skills': 0,
-            'nb_missing_skills': 0,
-            'skills_ratio': 0.0,
-            'similarity_mean': 0.0,
-            'similarity_max': 0.0,
-            'similarity_std': 0.0,
-            'top3_similarity_avg': 0.0,
-            'tfidf_similarity': 0.0,
-            'embedding_similarity': 0.0,
-            'nb_resume_technical': 0,
-            'nb_resume_soft': 0,
-            'nb_job_technical': 0,
-            'nb_job_soft': 0
+            'coverage': 0.0, 'quality': 0.0,
+            'nb_covered_skills': 0, 'nb_missing_skills': 0,
+            'skills_ratio': 0.0, 'similarity_mean': 0.0,
+            'similarity_max': 0.0, 'similarity_std': 0.0,
+            'top3_similarity_avg': 0.0, 'tfidf_similarity': 0.0,
+            'embedding_similarity': 0.0, 'nb_resume_technical': 0,
+            'nb_resume_soft': 0, 'nb_job_technical': 0, 'nb_job_soft': 0,
+            'resume_text_length': 0, 'resume_text_word_count': 0,
+            'resume_text_unique_words': 0, 'resume_text_avg_word_length': 0.0,
+            'resume_text_sentence_count': 0, 'resume_text_capital_ratio': 0.0,
+            'job_description_text_length': 0, 'job_description_text_word_count': 0,
+            'job_description_text_unique_words': 0, 'job_description_text_avg_word_length': 0.0,
+            'job_description_text_sentence_count': 0, 'job_description_text_capital_ratio': 0.0,
         }
 
 # ===== CALCUL DES FEATURES POUR TOUT LE DATASET =====
@@ -358,7 +397,7 @@ for i, (feat, corr) in enumerate(correlations.head(3).items(), 1):
     print(f"   {i}. {feat:25} → {corr:.3f}")
 
 # ===== SAUVEGARDE =====
-output_path = Path('data/processed/dataset_resume_job_fit_processed.csv')
+output_path = Path('data/resume_fit_job/processed/dataset_resume_job_fit_processed.csv')
 output_path.parent.mkdir(parents=True, exist_ok=True)
 
 features_df.to_csv(output_path, index=False)
@@ -382,6 +421,7 @@ print(f"   • Skills Matching (5) : coverage, quality, nb_covered_skills, nb_mi
 print(f"   • Similarité (4)      : similarity_mean, similarity_max, similarity_std, top3_similarity_avg")
 print(f"   • Sémantique (2)      : tfidf_similarity, embedding_similarity")
 print(f"   • Contexte (4)        : nb_resume_technical, nb_resume_soft, nb_job_technical, nb_job_soft")
+print(f"✅ Features extraites : 27 (15 originales + 12 textuelles)")
 print(f"\n📂 Fichier sauvegardé : {output_path}")
 print(f"\n🎯 Prochaine étape    : Entraîner le modèle ML")
 print("=" * 70)

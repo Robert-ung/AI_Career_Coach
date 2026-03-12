@@ -11,6 +11,7 @@ import logging
 import json
 import re
 from pathlib import Path
+from src.skills_extractor import SkillsExtractor
 
 # ✅ Initialisation du logger
 logging.basicConfig(
@@ -26,6 +27,9 @@ class JobMatcher:
     
     def __init__(self):
         """Initialize JobMatcher with sentence transformer model"""
+        # ✅ Utiliser SkillsExtractor pour extraire les skills du JOB aussi
+        self.skills_extractor = SkillsExtractor()
+        
         logger.info("Initialisation du JobMatcher...")
         self.model = SentenceTransformer('all-mpnet-base-v2')
 
@@ -98,71 +102,28 @@ class JobMatcher:
 
     def extract_job_skills(self, job: Dict) -> List[str]:
         """
-        Extraire et normaliser les compétences de l'offre avec skills_reference.json
-        
-        Args:
-            job: Dictionnaire de l'offre d'emploi
-            
-        Returns:
-            Liste de compétences extraites et normalisées
+        Extraire skills du job avec le MÊME extracteur que le CV
+        → Cohérence garantie entre CV et Job
         """
-        # Créer une liste de tous les skills reconnus
-        all_known_skills = set()
-        for canonical, variations in self.variations_map.items():
-            all_known_skills.add(canonical)
-            all_known_skills.update(variations)
+        # Construire le texte du job
+        job_text = ""
         
-        skills = []
-        
-        # 1. Requirements (priorité haute)
         if 'requirements' in job and job['requirements']:
-            for req in job['requirements']:
-                # Extraire mots entre parenthèses
-                match = re.search(r'\((.*?)\)', req)
-                if match:
-                    keywords = [k.strip() for k in match.group(1).split(',')]
-                    skills.extend(keywords)
-                
-                # Extraire skills connus du texte
-                req_lower = req.lower()
-                for known_skill in all_known_skills:
-                    pattern = r'\b' + re.escape(known_skill) + r'\b'
-                    if re.search(pattern, req_lower):
-                        skills.append(known_skill)
+            job_text += " ".join(job['requirements']) + " "
         
-        # 2. Nice-to-have (priorité moyenne)
         if 'nice_to_have' in job and job['nice_to_have']:
-            for nice in job['nice_to_have']:
-                match = re.search(r'\((.*?)\)', nice)
-                if match:
-                    keywords = [k.strip() for k in match.group(1).split(',')]
-                    skills.extend(keywords)
-                
-                nice_lower = nice.lower()
-                for known_skill in all_known_skills:
-                    pattern = r'\b' + re.escape(known_skill) + r'\b'
-                    if re.search(pattern, nice_lower):
-                        skills.append(known_skill)
+            job_text += " ".join(job['nice_to_have']) + " "
         
-        # 3. Normaliser avec le mapping
-        normalized = []
-        seen = set()
+        if 'description' in job and job['description']:
+            job_text += job['description']
         
-        for skill in skills:
-            if not skill or not skill.strip():
-                continue
-            
-            skill_norm = self._normalize_skill(skill)
-            
-            if skill_norm not in seen:
-                normalized.append(skill_norm)
-                seen.add(skill_norm)
+        # ✅ Même logique que le CV → cohérence garantie
+        result = self.skills_extractor.extract_from_cv(job_text)
         
-        logger.info(f"💼 Skills extraits de l'offre : {len(normalized)}")
-        if normalized:
-            logger.info(f"   Exemples : {', '.join(normalized[:3])}")
+        job_skills = result['technical_skills'] + result['soft_skills']
         
-        return normalized
+        logger.info(f"💼 Skills extraits du job : {len(job_skills)}")
+        return job_skills
         
     def calculate_skills_similarity(
         self, 
@@ -227,25 +188,32 @@ class JobMatcher:
                 best_similarity = 0
                 best_cv_skill = None
                 
-                # Comparer avec CHAQUE skill du CV (réutilise le cache)
+                # ✅ FIX 1 : Vérifier d'abord exact match (boost)
                 for cv_skill in cv_skills:
-                    cv_emb = cv_embeddings[cv_skill]
-                    similarity = cosine_similarity([job_emb], [cv_emb])[0][0] * 100
-                    
-                    if similarity > best_similarity:
-                        best_similarity = similarity
+                    if cv_skill.lower() == job_skill.lower():
+                        best_similarity = 100.0
                         best_cv_skill = cv_skill
+                        break
                 
-                # Déterminer le statut du match
-                if best_similarity >= 40:
+                # Si pas d'exact match → similarité sémantique
+                if best_similarity < 100:
+                    for cv_skill in cv_skills:
+                        cv_emb = cv_embeddings[cv_skill]
+                        similarity = cosine_similarity([job_emb], [cv_emb])[0][0] * 100
+                        
+                        if similarity > best_similarity:
+                            best_similarity = similarity
+                            best_cv_skill = cv_skill
+                
+                if best_similarity >= 65:
                     status = 'covered'
-                    match_level = 'high'
-                elif best_similarity >= 30:
+                    match_level = 'high' if best_similarity >= 70 else 'medium'
+                elif best_similarity >= 40:
                     status = 'partial'
-                    match_level = 'medium'
+                    match_level = 'low'
                 else:
                     status = 'missing'
-                    match_level = 'low'
+                    match_level = 'none'
                 
                 matches.append({
                     'job_skill': job_skill,
@@ -267,8 +235,8 @@ class JobMatcher:
             # Quality : Qualité moyenne des matchs couverts
             quality = sum(m['similarity'] for m in covered) / len(covered) if covered else 0
             
-            # Score final : Moyenne pondérée Coverage (50%) + Quality (50%)
-            overall_score = (coverage * 0.5) + (quality * 0.5)
+            # Coverage plus importante : mieux vaut couvrir beaucoup de skills
+            overall_score = (coverage * 0.8) + (quality * 0.2)
             
             logger.info(f"✅ Coverage: {coverage:.1f}% | Quality: {quality:.1f}% | Score: {overall_score:.1f}%")
             

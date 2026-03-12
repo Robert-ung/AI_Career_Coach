@@ -16,7 +16,19 @@
         "nb_resume_technical",
         "nb_resume_soft",
         "nb_job_technical",
-        "nb_job_soft"
+        "nb_job_soft",
+        "resume_text_length",
+        "resume_text_word_count",
+        "resume_text_unique_words",
+        "resume_text_avg_word_length",
+        "resume_text_sentence_count",
+        "resume_text_capital_ratio",
+        "job_description_text_length",
+        "job_description_text_word_count",
+        "job_description_text_unique_words",
+        "job_description_text_avg_word_length",
+        "job_description_text_sentence_count",
+        "job_description_text_capital_ratio"
     ],
     "class_mapping": {
         "0.0": 0,
@@ -43,13 +55,13 @@
         "Partial Fit",
         "Perfect Fit"
     ],
-    "train_samples": 3619,
-    "test_samples": 905,
+    "train_samples": 4992,
+    "test_samples": 1249,
     "dataset_version": "clean (30% incoh\u00e9rences supprim\u00e9es)",
-    "test_accuracy": 0.7038674033149172,
-    "test_precision": 0.6937853267787111,
-    "test_recall": 0.7038674033149172,
-    "test_f1": 0.693833564587054,
+    "test_accuracy": 0.677341873498799,
+    "test_precision": 0.6738130647608548,
+    "test_recall": 0.677341873498799,
+    "test_f1": 0.6716794710385061,
     "scaler_used": true,
     "notes": "Mod\u00e8le entra\u00een\u00e9 sur dataset nettoy\u00e9 (4,524 samples). Classes encod\u00e9es : 0.0\u21920, 0.5\u21921, 1.0\u21922."
 }

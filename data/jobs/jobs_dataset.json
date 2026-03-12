@@ -30,10 +30,7 @@
         "Anglais technique (lecture documentation)"
       ],
       "nice_to_have": [
-        "PyTorch ou TensorFlow",
-        "FastAPI ou Flask",
-        "MLflow",
-        "AWS ou GCP"
+        
       ],
       "posted_date": "2026-01-08",
       "url": "https://example-jobs.com/1",
