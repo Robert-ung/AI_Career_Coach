@@ -10,6 +10,7 @@ import logging
 import json
 import re
 from pathlib import Path
+from src.skills_extractor import SkillsExtractor
 
 # import os
 
@@ -30,6 +31,9 @@ class JobMatcher:
 
     def __init__(self):
         """Initialize JobMatcher with sentence transformer model"""
+        # ✅ Utiliser SkillsExtractor pour extraire les skills du JOB aussi
+        self.skills_extractor = SkillsExtractor()
+
         logger.info("Initialisation du JobMatcher...")
         self.model = SentenceTransformer('all-mpnet-base-v2')
         self._cv_embeddings_cache = {}   # ← AJOUT : cache CV embeddings
@@ -121,75 +125,42 @@ class JobMatcher:
 
     def extract_job_skills(self, job: Dict) -> List[str]:
         """
-        Extraire et normaliser les compétences de l'offre avec skills_reference.json
-
-        Args:
-            job: Dictionnaire de l'offre d'emploi
-
-        Returns:
-            Liste de compétences extraites et normalisées
+        Extraire skills du job avec le MÊME extracteur que le CV
+        → Cohérence garantie entre CV et Job
         """
-
-        skills = []
-
-        # 1. Requirements (priorité haute)
+        # Construire le texte du job
+        job_text = ""
+        
         if 'requirements' in job and job['requirements']:
-            for req in job['requirements']:
-                # Extraire mots entre parenthèses
-                match = re.search(r'\((.*?)\)', req)
-                if match:
-                    keywords = [k.strip() for k in match.group(1).split(',')]
-                    skills.extend(keywords)
-
-                # ✅ La boucle for lente par le Super Regex
-                if req:
-                    skills.extend(self._skills_regex.findall(req.lower()))
-
-        # 2. Nice-to-have (priorité moyenne)
+            job_text += " ".join(job['requirements']) + " "
+        
         if 'nice_to_have' in job and job['nice_to_have']:
-            for nice in job['nice_to_have']:
-                match = re.search(r'\((.*?)\)', nice)
-                if match:
-                    keywords = [k.strip() for k in match.group(1).split(',')]
-                    skills.extend(keywords)
-
-                # ✅ 
-                if nice:
-                    skills.extend(self._skills_regex.findall(nice.lower()))
-                    
-        # 3. Normaliser avec le mapping
-        normalized = []
-        seen = set()
-
-        for skill in skills:
-            if not skill or not skill.strip():
-                continue
-
-            skill_norm = self._normalize_skill(skill)
-
-            if skill_norm not in seen:
-                normalized.append(skill_norm)
-                seen.add(skill_norm)
-
-        logger.info(f"💼 Skills extraits de l'offre : {len(normalized)}")
-        if normalized:
-            logger.info(f"   Exemples : {', '.join(normalized[:3])}")
-
-        return normalized
+            job_text += " ".join(job['nice_to_have']) + " "
+        
+        if 'description' in job and job['description']:
+            job_text += job['description']
+        
+        # ✅ Même logique que le CV → cohérence garantie
+        result = self.skills_extractor.extract_from_cv(job_text)
+        
+        job_skills = result['technical_skills'] + result['soft_skills']
+        
+        logger.info(f"💼 Skills extraits du job : {len(job_skills)}")
+        return job_skills
 
     def calculate_skills_similarity(
-        self,
-        cv_skills: List[str],
+        self, 
+        cv_skills: List[str], 
         job: Dict
     ) -> Dict:
         """
         APPROCHE 4 : Matching Skills Offre → CV avec cache d'embeddings
         Pour chaque skill requis par l'offre, trouver le meilleur match dans le CV
-
+        
         Args:
             cv_skills: Liste de compétences du CV
             job: Dictionnaire de l'offre d'emploi
-
+            
         Returns:
             Dict avec score, coverage, quality et détails par compétence
         """
@@ -202,10 +173,10 @@ class JobMatcher:
                 'total_required': 0,
                 'matches': []
             }
-
+        
         # Extraire les skills de l'offre
         job_skills = self.extract_job_skills(job)
-
+        
         if not job_skills:
             logger.warning("⚠️ Aucune compétence trouvée dans l'offre")
             return {
@@ -216,69 +187,57 @@ class JobMatcher:
                 'total_required': 0,
                 'matches': []
             }
-
-        logger.info(
-            f"🔍 Matching {len(job_skills)} skills offre ↔ {len(cv_skills)} skills CV")
-
+        
+        logger.info(f"🔍 Matching {len(job_skills)} skills offre ↔ {len(cv_skills)} skills CV")
+        
         try:
-            # ✅ OPTIMISATION : Encoder en BATCH avec cache par instance
-            # CV embeddings : encoder uniquement les nouveaux skills
-            new_cv_skills = [s for s in cv_skills if s.lower() not in self._cv_embeddings_cache]
-            if new_cv_skills:
-                new_cv_embs = self.model.encode(
-                    [s.lower() for s in new_cv_skills],
-                    batch_size=64,
-                    show_progress_bar=False,
-                    convert_to_numpy=True
-                )
-                for skill, emb in zip(new_cv_skills, new_cv_embs):
-                    self._cv_embeddings_cache[skill.lower()] = emb
-
-            # Job embeddings : encoder uniquement les nouveaux skills
-            new_job_skills = [s for s in job_skills if s.lower() not in self._job_embeddings_cache]
-            if new_job_skills:
-                new_job_embs = self.model.encode(
-                    [s.lower() for s in new_job_skills],
-                    batch_size=64,
-                    show_progress_bar=False,
-                    convert_to_numpy=True
-                )
-                for skill, emb in zip(new_job_skills, new_job_embs):
-                    self._job_embeddings_cache[skill.lower()] = emb
-
-            # Récupérer depuis le cache
-            cv_embeddings = {s: self._cv_embeddings_cache[s.lower()] for s in cv_skills}
-            job_embeddings = {s: self._job_embeddings_cache[s.lower()] for s in job_skills}
-
+            # ✅ OPTIMISATION : Encoder tous les skills UNE SEULE FOIS (cache)
+            cv_embeddings = {
+                skill: self.model.encode([skill.lower()], show_progress_bar=False)[0]
+                for skill in cv_skills
+            }
+            
+            job_embeddings = {
+                skill: self.model.encode([skill.lower()], show_progress_bar=False)[0]
+                for skill in job_skills
+            }
+            
             matches = []
-
-            # 🚀 ASTUCE INTELLIGENTE : Vectorisation / Batching
-            # On met tous les embeddings dans deux listes
-            job_embs_list = [job_embeddings[job_skill] for job_skill in job_skills]
-            cv_embs_list = [cv_embeddings[cv_skill] for cv_skill in cv_skills]
-
-            # On fait UN SEUL appel à sklearn pour tout calculer d'un coup !
-            # sim_matrix contient toutes les combinaisons possibles (matrice)
-            sim_matrix = cosine_similarity(job_embs_list, cv_embs_list) * 100
-
+            
             # Pour chaque skill de l'OFFRE
-            for i, job_skill in enumerate(job_skills):
-                # Trouver l'index du meilleur score dans notre matrice pré-calculée
-                best_idx = sim_matrix[i].argmax()
-                best_similarity = sim_matrix[i][best_idx]
-                best_cv_skill = cv_skills[best_idx]
-
-                # Déterminer le statut du match
-                if best_similarity >= 40:
+            for job_skill in job_skills:
+                job_emb = job_embeddings[job_skill]
+                
+                best_similarity = 0
+                best_cv_skill = None
+                
+                # ✅ FIX 1 : Vérifier d'abord exact match (boost)
+                for cv_skill in cv_skills:
+                    if cv_skill.lower() == job_skill.lower():
+                        best_similarity = 100.0
+                        best_cv_skill = cv_skill
+                        break
+                
+                # Si pas d'exact match → similarité sémantique
+                if best_similarity < 100:
+                    for cv_skill in cv_skills:
+                        cv_emb = cv_embeddings[cv_skill]
+                        similarity = cosine_similarity([job_emb], [cv_emb])[0][0] * 100
+                        
+                        if similarity > best_similarity:
+                            best_similarity = similarity
+                            best_cv_skill = cv_skill
+                
+                if best_similarity >= 65:
                     status = 'covered'
-                    match_level = 'high'
-                elif best_similarity >= 30:
+                    match_level = 'high' if best_similarity >= 70 else 'medium'
+                elif best_similarity >= 40:
                     status = 'partial'
-                    match_level = 'medium'
+                    match_level = 'low'
                 else:
                     status = 'missing'
-                    match_level = 'low'
-
+                    match_level = 'none'
+                
                 matches.append({
                     'job_skill': job_skill,
                     'cv_skill': best_cv_skill,
@@ -286,30 +245,24 @@ class JobMatcher:
                     'status': status,
                     'match': match_level
                 })
-
+            
             # Trier par similarité décroissante
-            matches = sorted(
-                matches,
-                key=lambda x: x['similarity'],
-                reverse=True)
-
+            matches = sorted(matches, key=lambda x: x['similarity'], reverse=True)
+            
             # Calculer les métriques
             covered = [m for m in matches if m['status'] == 'covered']
-
+            
             # Coverage : % de skills de l'offre couverts
-            coverage = (len(covered) / len(job_skills)) * \
-                100 if job_skills else 0
-
+            coverage = (len(covered) / len(job_skills)) * 100 if job_skills else 0
+            
             # Quality : Qualité moyenne des matchs couverts
-            quality = sum(m['similarity']
-                          for m in covered) / len(covered) if covered else 0
-
-            # Score final : Moyenne pondérée Coverage (50%) + Quality (50%)
-            overall_score = (coverage * 0.5) + (quality * 0.5)
-
-            logger.info(
-                f"✅ Coverage: {coverage:.1f}% | Quality: {quality:.1f}% | Score: {overall_score:.1f}%")
-
+            quality = sum(m['similarity'] for m in covered) / len(covered) if covered else 0
+            
+            # Coverage plus importante : mieux vaut couvrir beaucoup de skills
+            overall_score = (coverage * 0.8) + (quality * 0.2)
+            
+            logger.info(f"✅ Coverage: {coverage:.1f}% | Quality: {quality:.1f}% | Score: {overall_score:.1f}%")
+            
             return {
                 'overall_score': overall_score,
                 'coverage': coverage,
@@ -318,7 +271,7 @@ class JobMatcher:
                 'total_required': len(job_skills),
                 'matches': matches
             }
-
+        
         except Exception as e:
             logger.error(f"❌ Erreur lors du matching : {e}")
             return {
