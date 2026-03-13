@@ -13,6 +13,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import sys
+import requests
+import logging
 
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -165,6 +167,16 @@ def run_daily_scrape():
     logger.info(f"✅ Terminé : {total_new} nouveaux / {total_found} trouvés")
     logger.info("=" * 50)
 
+    # --- SYNCHRONISATION API AUTOMATIQUE ---
+    logger.info("🔄 Déclenchement de la synchronisation DB -> FAISS sur l'API...")
+    try:
+        response = requests.post("http://api:8000/api/v1/sync-jobs")
+        if response.status_code == 200:
+            logger.info(f"✅ API synchronisée avec succès: {response.json().get('jobs_loaded')} offres chargées.")
+        else:
+            logger.error(f"❌ Erreur de synchronisation API: {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Impossible de contacter l'API pour la synchronisation: {e}")
 
 def main():
     logger.info("🕐 Scheduler démarré — scraping 1x/jour (plan Free JSearch)")
