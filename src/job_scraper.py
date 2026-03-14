@@ -8,6 +8,7 @@ import requests
 from typing import List, Dict, Optional
 from datetime import datetime
 from dotenv import load_dotenv
+from deep_translator import GoogleTranslator
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -31,6 +32,18 @@ class JobScraper:
             "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
         }
         logger.info("✅ JobScraper initialisé")
+        self.translator = GoogleTranslator(source='auto', target='en')
+
+    def translate_text(self, text: str) -> str:
+        """Traduit un texte en anglais de manière sécurisée (limite 5000 chars)"""
+        if not text:
+            return ""
+        try:
+            # Sécuriser la limite de caractères de l'API Google Translate
+            return self.translator.translate(text[:4999])
+        except Exception as e:
+            logging.warning(f"Erreur de traduction ignorée : {e}")
+            return text
 
     def search_jobs(
         self,
@@ -96,21 +109,27 @@ class JobScraper:
 
     def _normalize_job(self, raw: Dict) -> Dict:
         """Normaliser un job JSearch vers notre format interne"""
+        
+        # --- AJOUT : Traduction du titre et de la description ---
+        raw_title = raw.get("job_title", "")
+        raw_desc = raw.get("job_description", "")
+        
+        translated_title = self.translate_text(raw_title)
+        translated_desc = self.translate_text(raw_desc)
+        
         return {
             "job_id": raw.get("job_id", ""),
-            "title": raw.get("job_title", ""),
+            "title": translated_title, # <--- Utilisé ici
             "company": raw.get("employer_name", ""),
             "location": self._extract_location(raw),
-            "description": raw.get("job_description", ""),
+            "description": translated_desc, # <--- Utilisé ici
             "url": raw.get("job_apply_link", ""),
             "source": raw.get("job_publisher", "").lower(),
             "employment_type": raw.get("job_employment_type", ""),
             "is_remote": raw.get("job_is_remote", False),
             "salary_min": raw.get("job_min_salary"),
             "salary_max": raw.get("job_max_salary"),
-            "required_skills": self._extract_skills_from_description(
-                raw.get("job_description", "")
-            ),
+            "required_skills": self._extract_skills_from_description(raw_desc), # On garde le texte d'origine pour les skills ou tu peux utiliser translated_desc
             "scraped_at": datetime.now().isoformat()
         }
 

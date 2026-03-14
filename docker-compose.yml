@@ -115,6 +115,9 @@ services:
     depends_on:
       - postgres
       - api
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data:ro
     restart: unless-stopped
     networks:
       - pfe-network
